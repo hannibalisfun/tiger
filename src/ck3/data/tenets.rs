@@ -1,6 +1,6 @@
 use crate::block::{BV, Block};
 use crate::ck3::data::doctrines::{
-    is_unreformed, validate_special_parameters, verify_parameter_loca,
+    is_unreformed, mark_parameter_loca, validate_special_parameters,
 };
 use crate::ck3::modif::ModifKinds;
 use crate::ck3::validate::{validate_parameter_value, validate_traits};
@@ -91,11 +91,11 @@ impl DbKind for Tenet {
         vd.field_validated_block("parameters", |block, data| {
             let mut vd = Validator::new(block, data);
             for name in vd.values() {
-                verify_parameter_loca(name, data);
+                mark_parameter_loca(name, data);
             }
             // TODO: verify. Vanilla uses `name = yes` only in doctrine parameters.
             vd.unknown_value_fields(|key, value| {
-                verify_parameter_loca(key, data);
+                mark_parameter_loca(key, data);
                 validate_parameter_value(key, value);
             });
         });
@@ -135,10 +135,7 @@ impl DbKind for Tenet {
             let vd = Validator::new(block, data);
             validate_modifs(block, data, ModifKinds::Character, vd);
         });
-        vd.field_validated_list("personal_tenet_parameters", |flag, data| {
-            // The docs say they are localized with the doctrine parameter prefix
-            let loca = format!("doctrine_parameter_{flag}");
-            data.verify_exists_implied(Item::Localization, &loca, flag);
-        });
+        // Vanilla leaves AI-only flags unlocalized on purpose
+        vd.field_validated_list("personal_tenet_parameters", mark_parameter_loca);
     }
 }

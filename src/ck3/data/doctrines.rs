@@ -184,21 +184,21 @@ fn icon_exists(define: &str, name: &Token, data: &Everything) -> bool {
 fn validate_parameters(block: &Block, data: &Everything) {
     let mut vd = Validator::new(block, data);
     for name in vd.values() {
-        verify_parameter_loca(name, data);
+        mark_parameter_loca(name, data);
     }
     // The `parameter = yes` form is undocumented, but still works (verified in 1.20.1)
     vd.unknown_value_fields(|key, value| {
-        verify_parameter_loca(key, data);
+        mark_parameter_loca(key, data);
         validate_parameter_value(key, value);
     });
 }
 
 /// The docs say a doctrine's effects are localized with `doctrine_parameter_` plus the parameter
 /// name, and that tenets follow the doctrine docs
-pub fn verify_parameter_loca(name: &Token, data: &Everything) {
-    // TODO: verify. The game may skip a parameter without this loca instead of showing the key.
+pub fn mark_parameter_loca(name: &Token, data: &Everything) {
+    // Optional: the game shows nothing for a parameter without it (verified in 1.20.1)
     let loca = format!("doctrine_parameter_{name}");
-    data.verify_exists_implied(Item::Localization, &loca, name);
+    data.mark_used(Item::Localization, &loca);
 }
 
 /// Check that no doctrine is listed twice, and that no two doctrines are from the same group
