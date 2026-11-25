@@ -1,0 +1,26 @@
+[
+  {
+    "path": "gui/tiger_port.gui",
+    "marker": "tiger_gui_missing_good",
+    "key": "missing-item",
+    "contains": "tiger_gui_missing_good"
+  },
+  {
+    "path": "gui/tiger_port.gui",
+    "marker": "tiger_gui_missing_district",
+    "key": "missing-item",
+    "contains": "tiger_gui_missing_district"
+  },
+  {
+    "path": "gui/tiger_port.gui",
+    "marker": "CalcTriggeredName(GetPlayer)",
+    "key": "datafunctions",
+    "contains": "Province"
+  },
+  {
+    "path": "gui/tiger_port.gui",
+    "marker": "GetNameNoTooltip('extra')",
+    "key": "datafunctions",
+    "contains": "argument"
+  }
+]

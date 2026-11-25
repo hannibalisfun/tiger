@@ -1,0 +1,17 @@
+﻿window = {
+	name = "tiger_port_datatypes"
+	text_single = { text = "[GetTradeGoodType('trade_good_grain').GetNameWithIcon]" }
+	text_single = { text = "[GetTradeGoodCategory('trade_category_cereals').GetNameNoTooltip]" }
+	text_single = { text = "[GetDistrictType('POD_wod_district').GetPrimaryBuildingType.CalcTriggeredName(Province.Self)]" }
+	text_single = { text = "[GetBuildingType('pb_wod_01').CalcTriggeredName(Province.Self)]" }
+	text_single = { text = "[GetTollLevel('toll_level_no_tolls').GetName]" }
+	text_single = { text = "[GetTradeTaskType('manage_competition').GetKey]" }
+	widget = {
+		datacontext = "[TradeGoodWindow.GetSelectedTradeGoodType.GetNeedCategory]"
+		text_single = { text = "[TradeGoodCategory.GetNameWithIcon]" }
+	}
+	text_single = { text = "[GetTradeGoodType('tiger_gui_missing_good').GetName]" }
+	text_single = { text = "[GetDistrictType('tiger_gui_missing_district').GetName]" }
+	text_single = { text = "[GetBuildingType('pb_wod_01').CalcTriggeredName(GetPlayer)]" }
+	text_single = { text = "[GetTradeGoodCategory('trade_category_cereals').GetNameNoTooltip('extra')]" }
+}
