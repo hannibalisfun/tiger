@@ -465,6 +465,10 @@ impl Iterator for Lexer<'_> {
                             continue;
                         } else if c == '"' && !escaped {
                             let token = id.take_to_token();
+                            #[cfg(feature = "ck3")]
+                            if Game::is_ck3() && token.loc.link_idx.is_none() {
+                                crate::ck3::variable_maps::check_quoted_parameter(&token);
+                            }
                             let close_loc = self.loc;
                             self.consume();
 

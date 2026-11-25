@@ -290,9 +290,11 @@ pub fn validate_possibly_named_color(bv: &BV, data: &Everything) {
     }
 }
 
-/// Check some iterator fields *before* the list scope has opened.
+/// Check fields evaluated in the outer scope, then open the iterator entry scope.
 #[allow(unused_variables)] // `name` is only used for ck3
-pub fn precheck_iterator_fields(
+pub fn open_iterator_scope(
+    outscope: Scopes,
+    token: &Token,
     ltype: ListType,
     name: &str,
     block: &Block,
@@ -394,6 +396,10 @@ pub fn precheck_iterator_fields(
     {
         validate_target_ok_this(tag, data, sc, Scopes::Country);
     }
+    #[cfg(feature = "ck3")]
+    let outscope =
+        crate::ck3::variable_maps::iterator_scope(name, block, data, sc).unwrap_or(outscope);
+    sc.open_scope(outscope, token.clone());
 }
 
 /// This checks the fields that are only used in iterators.
@@ -530,12 +536,23 @@ pub fn validate_inside_iterator(
         if let Some(token) = vd.field_value("variable") {
             sc.replace_global_list_entry(token);
         }
+    } else if Game::is_ck3()
+        && matches!(
+            name.as_str(),
+            "key_in_variable_map" | "key_in_local_variable_map" | "key_in_global_variable_map"
+        )
+    {
+        vd.req_field("variable");
+        vd.field_identifier("variable", "map name");
+        vd.ban_field("list", || format!("{listtype}_in_list"));
     } else {
         vd.ban_field("list", || format!("{listtype}_in_list"));
         vd.ban_field("variable", || {
-            format!(
-                "`{listtype}_in_list`, `{listtype}_in_local_list`, or `{listtype}_in_global_list`"
-            )
+            if Game::is_ck3() {
+                "variable list or map iterators".to_owned()
+            } else {
+                format!("`{listtype}_in_list`, `{listtype}_in_local_list`, or `{listtype}_in_global_list`")
+            }
         });
     }
 

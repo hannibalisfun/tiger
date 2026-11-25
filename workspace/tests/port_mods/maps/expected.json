@@ -1,0 +1,74 @@
+[
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "character key in flag map",
+    "key": "scopes",
+    "contains": "flag"
+  },
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "province result",
+    "key": "scopes",
+    "contains": "character"
+  },
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "third argument",
+    "key": "validation",
+    "contains": "single"
+  },
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "flag iterator limit",
+    "key": "scopes",
+    "contains": "character"
+  },
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "missing key",
+    "key": "field-missing",
+    "contains": "key"
+  },
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "missing variable",
+    "key": "field-missing",
+    "contains": "variable"
+  },
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "stale key after clear",
+    "key": "scopes",
+    "contains": "flag"
+  },
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "whole lookup macro argument",
+    "key": "macro",
+    "contains": "loses its quotes"
+  },
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "chained this is character",
+    "key": "scopes",
+    "contains": "province"
+  },
+  {
+    "path": "common/scripted_effects/tiger_variable_map_macros.txt",
+    "marker": "raw quoted macro",
+    "key": "validation",
+    "contains": "load error"
+  },
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "inline script value",
+    "key": "structure",
+    "contains": "value"
+  },
+  {
+    "path": "common/decisions/tiger_variable_map_cases.txt",
+    "marker": "good cannot store maps",
+    "key": "scopes",
+    "contains": "trade good type"
+  }
+]

@@ -8,6 +8,8 @@ use crate::token::Token;
 
 #[derive(Debug)]
 pub struct Variables {
+    #[cfg(feature = "ck3")]
+    pub(crate) maps: crate::ck3::variable_maps::PersistentMaps,
     names: TigerHashSet<&'static str>,
     // For hoi4: variables that were defined with @something at the end, here without the @ part.
     name_prefixes: TigerHashSet<&'static str>,
@@ -25,6 +27,8 @@ pub struct Variables {
 impl Variables {
     pub fn new() -> Self {
         Self {
+            #[cfg(feature = "ck3")]
+            maps: crate::ck3::variable_maps::PersistentMaps::default(),
             names: TigerHashSet::default(),
             name_prefixes: TigerHashSet::default(),
             name_speculative_prefixes: TigerHashSet::default(),
@@ -73,6 +77,14 @@ impl Variables {
         for Field(key, cmp, bv) in block.iter_fields() {
             if !matches!(cmp, Comparator::Equals(Single)) {
                 continue;
+            }
+            #[cfg(feature = "ck3")]
+            if Game::is_ck3()
+                && (key.as_str().eq_ignore_ascii_case("add_to_variable_map")
+                    || key.as_str().eq_ignore_ascii_case("add_to_global_variable_map"))
+                && let Some(block) = bv.get_block()
+            {
+                self.maps.scan_write(&key.as_str().to_ascii_lowercase(), block);
             }
             if let Some(extract) = self.create_variable.get(key.as_str()) {
                 if let Some(name) = extract.extract(bv) {

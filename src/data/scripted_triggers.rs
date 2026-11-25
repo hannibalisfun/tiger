@@ -207,6 +207,10 @@ impl Trigger {
         tooltipped: Tooltipped,
         negated: bool,
     ) {
+        #[cfg(feature = "ck3")]
+        if crate::ck3::variable_maps::invalid_macro_arguments(args) {
+            return;
+        }
         // Every invocation is treated as different even if the args are the same,
         // because we want to point to the correct one when reporting errors.
         if !self.cached_compat(key, args, tooltipped, negated, sc, data)

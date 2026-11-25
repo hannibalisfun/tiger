@@ -17,7 +17,7 @@ use crate::token::Token;
 use crate::tooltipped::Tooltipped;
 use crate::trigger::{validate_target_ok_this, validate_trigger, validate_trigger_key_bv};
 use crate::validate::{
-    ListType, precheck_iterator_fields, validate_ifelse_sequence, validate_inside_iterator,
+    ListType, open_iterator_scope, validate_ifelse_sequence, validate_inside_iterator,
     validate_iterator_fields, validate_scope_chain,
 };
 use crate::validator::Validator;
@@ -194,8 +194,15 @@ fn validate_inner(
                     }
                     sc.expect(inscopes, &Reason::Token(token.clone()), data);
                     if let Some(block) = bv.expect_block() {
-                        precheck_iterator_fields(ltype, it_name.as_str(), block, data, sc);
-                        sc.open_scope(outscope, token.clone());
+                        open_iterator_scope(
+                            outscope,
+                            token,
+                            ltype,
+                            it_name.as_str(),
+                            block,
+                            data,
+                            sc,
+                        );
                         validate_iterator(ltype, &it_name, block, data, sc, check_desc);
                         made_changes = true;
                         sc.close();

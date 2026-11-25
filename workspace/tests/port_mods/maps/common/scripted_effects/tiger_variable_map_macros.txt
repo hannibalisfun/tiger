@@ -1,0 +1,10 @@
+﻿tiger_map_scalar_macro = {
+	add_to_local_variable_map = { name = tiger_scalar key = $ARG$ value = 1 }
+	save_scope_value_as = { name = tiger_key value = $ARG$ }
+	if = { limit = { exists = "local_variable_map(tiger_scalar|scope:tiger_key)" } }
+}
+
+tiger_map_macro_load_error = {
+	add_to_local_variable_map = { name = tiger_macro_load key = $ARG$ value = 1 }
+	if = { limit = { exists = "local_variable_map(tiger_macro_load|$ARG$)" } } # raw quoted macro
+}

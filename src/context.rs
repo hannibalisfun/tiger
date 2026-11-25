@@ -41,6 +41,8 @@ pub struct ScopeContext {
     local_names: TigerHashMap<&'static str, usize>,
     /// Names of local variable lists; the values are indices into the `named` vector.
     local_list_names: TigerHashMap<&'static str, usize>,
+    #[cfg(feature = "ck3")]
+    pub(crate) local_maps: TigerHashMap<&'static str, crate::ck3::variable_maps::LocalMap>,
 
     /// Named scope values are `ScopeEntry::Scope` or `ScopeEntry::Named` or `ScopeEntry::Rootref`.
     /// Invariant: there are no cycles in the array via `ScopeEntry::Named` entries.
@@ -182,6 +184,8 @@ pub struct Signature {
     scope_names: Vec<(&'static str, Scopes)>,
     scope_list_names: Vec<(&'static str, Scopes)>,
     local_names: Vec<(&'static str, Scopes)>,
+    #[cfg(feature = "ck3")]
+    local_maps: Vec<(&'static str, crate::ck3::variable_maps::LocalMap)>,
     local_list_names: Vec<(&'static str, Scopes)>,
 }
 
@@ -250,6 +254,8 @@ impl ScopeContext {
             scope_names: TigerHashMap::default(),
             scope_list_names: TigerHashMap::default(),
             local_names: TigerHashMap::default(),
+            #[cfg(feature = "ck3")]
+            local_maps: TigerHashMap::default(),
             local_list_names: TigerHashMap::default(),
             named: Vec::new(),
             is_input: Vec::new(),
@@ -278,6 +284,8 @@ impl ScopeContext {
             scope_names: TigerHashMap::default(),
             scope_list_names: TigerHashMap::default(),
             local_names: TigerHashMap::default(),
+            #[cfg(feature = "ck3")]
+            local_maps: TigerHashMap::default(),
             local_list_names: TigerHashMap::default(),
             named: Vec::new(),
             is_input: Vec::new(),
@@ -795,6 +803,12 @@ impl ScopeContext {
             scope_names: process_scope_names(self, &self.scope_names, data),
             scope_list_names: process_scope_names(self, &self.scope_list_names, data),
             local_names: process_local_names(self, &self.local_names, data),
+            #[cfg(feature = "ck3")]
+            local_maps: {
+                let mut maps: Vec<_> = self.local_maps.iter().map(|(&n, &t)| (n, t)).collect();
+                maps.sort_by_key(|(n, _)| *n);
+                maps
+            },
             local_list_names: process_local_names(self, &self.local_list_names, data),
         }
     }
@@ -1596,6 +1610,10 @@ impl ScopeContext {
             }
         }
 
+        #[cfg(feature = "ck3")]
+        for (&name, &change) in &other.local_maps {
+            self.local_maps.entry(name).or_default().apply(change);
+        }
         // Compare restrictions on local variable lists
         for (name, &oidx) in &other.local_list_names {
             if let Some(idx) = self.local_list_names.get(name).copied() {

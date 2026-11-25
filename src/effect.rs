@@ -31,7 +31,7 @@ use crate::validate::validate_possibly_named_color;
 #[cfg(feature = "jomini")]
 use crate::validate::validate_scripted_modifier_call;
 use crate::validate::{
-    ListType, precheck_iterator_fields, validate_identifier, validate_ifelse_sequence,
+    ListType, open_iterator_scope, validate_identifier, validate_ifelse_sequence,
     validate_inside_iterator, validate_iterator_fields, validate_scope_chain,
 };
 use crate::validator::{Validator, ValueValidator};
@@ -409,8 +409,7 @@ pub fn validate_effect_field(
             Effect::Iterator(ltype, outscope) => {
                 let it_name = key.split_once('_').unwrap().1;
                 if let Some(block) = bv.expect_block() {
-                    precheck_iterator_fields(ltype, it_name.as_str(), block, data, sc);
-                    sc.open_scope(outscope, key.clone());
+                    open_iterator_scope(outscope, key, ltype, it_name.as_str(), block, data, sc);
                     let mut vd = Validator::new(block, data);
                     has_tooltip |= validate_effect_internal(
                         &Lowercase::new(it_name.as_str()),
@@ -462,8 +461,7 @@ pub fn validate_effect_field(
         }
         sc.expect(inscopes, &Reason::Token(key.clone()), data);
         if let Some(b) = bv.expect_block() {
-            precheck_iterator_fields(ltype, it_name.as_str(), b, data, sc);
-            sc.open_scope(outscope, key.clone());
+            open_iterator_scope(outscope, key, ltype, it_name.as_str(), b, data, sc);
             let mut vd = Validator::new(b, data);
             has_tooltip |= validate_effect_internal(
                 &Lowercase::new(it_name.as_str()),

@@ -1,0 +1,84 @@
+﻿tiger_map_cases = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_castle_view.dds" }
+	decision_group_type = pod_splat
+	ai_check_interval = 0
+	is_valid = {
+		has_global_variable_map = tiger_registry
+		global_variable_map_size = { name = tiger_registry value >= 1 }
+		is_key_in_global_variable_map = { name = tiger_registry target = flag:rome }
+		is_value_in_global_variable_map = { name = tiger_registry target = capital_province }
+		any_key_in_global_variable_map = { variable = tiger_registry this = flag:rome }
+		"global_variable_map(tiger_registry|flag:rome)" ?= { has_holding_type = castle_holding }
+		"global_variable_map(tiger_registry|root)" ?= { always = yes } # character key in flag map
+		"global_variable_map(tiger_registry|flag:rome)" ?= { is_adult = yes } # province result
+		"global_variable_map(tiger_registry|flag:rome|root)" ?= { always = yes } # third argument
+		POD_save_grand_city_province = { TYPE = flag:rome SAVE_AS = tiger_rome }
+	}
+	effect = {
+		capital_county.trade_market = {
+			add_to_variable_map = { name = tiger_market_registry key = root value = flag:market }
+		}
+		trade_good_type:trade_good_grain = {
+			add_to_variable_map = { name = tiger_bad_store key = root value = flag:grain } # good cannot store maps
+		}
+		add_to_global_variable_map = { name = tiger_registry key = flag:rome value = title:b_roma.title_province days = 5 }
+		every_key_in_global_variable_map = {
+			variable = tiger_registry
+			"global_variable_map(tiger_registry|this)" = { add_regular_district = POD_wod_district }
+		}
+		ordered_key_in_global_variable_map = {
+			variable = tiger_registry
+			order_by = 1
+			limit = { is_adult = yes } # flag iterator limit
+		}
+		remove_from_global_variable_map = { name = tiger_registry key = flag:rome }
+		clear_global_variable_map = tiger_registry
+
+		add_to_local_variable_map = { name = tiger_registry key = root value = capital_province }
+		random_key_in_local_variable_map = {
+			variable = tiger_registry
+			limit = { is_adult = yes }
+			"local_variable_map(tiger_registry|this)" = { add_regular_district = POD_wod_district }
+		}
+		if = { limit = {
+			has_local_variable_map = tiger_registry
+			local_variable_map_size = { name = tiger_registry value > 0 }
+			is_key_in_local_variable_map = { name = tiger_registry target = root }
+			is_value_in_local_variable_map = { name = tiger_registry target = capital_province }
+		} }
+		remove_from_local_variable_map = { name = tiger_registry key = root }
+		clear_local_variable_map = tiger_registry
+		add_to_local_variable_map = { name = tiger_registry key = flag:rome value = root }
+		"local_variable_map(tiger_registry|flag:rome)" = { add_gold = 1 }
+		"local_variable_map(tiger_registry|root)" = { add_gold = 1 } # stale key after clear
+		add_to_local_variable_map = { name = tiger_numbers key = flag:score value = -3.5 }
+		save_scope_value_as = { name = tiger_num value = "local_variable_map(tiger_numbers|flag:score)" }
+		if = { limit = { "local_variable_map(tiger_numbers|flag:score)" < 0 } }
+		ordered_key_in_local_variable_map = {
+			variable = tiger_numbers
+			order_by = "local_variable_map(tiger_numbers|this)"
+		}
+		add_to_local_variable_map = { name = tiger_numbers key = flag:inline value = { value = 2 add = 3 } } # inline script value
+		tiger_map_scalar_macro = { ARG = flag:rome }
+		tiger_map_macro_load_error = { ARG = flag:rome }
+		tiger_map_scalar_macro = { ARG = "global_variable_map(tiger_registry|flag:rome)" } # whole lookup macro argument
+		add_to_variable_map = { name = tiger_owner_this key = province:1 value = flag:rome }
+		capital_province = {
+			"root.variable_map(tiger_owner_this|this)" = { } # chained this is character
+		}
+
+		add_to_variable_map = { name = tiger_registry key = title:k_france value = flag:rome }
+		every_key_in_variable_map = { variable = tiger_registry limit = { tier = tier_kingdom } }
+		if = { limit = {
+			has_variable_map = tiger_registry
+			variable_map_size = { name = tiger_registry value >= 1 }
+			is_key_in_variable_map = { name = tiger_registry target = title:k_france }
+			is_value_in_variable_map = { name = tiger_registry target = flag:rome }
+			"root.variable_map(tiger_registry|title:k_france)" = flag:rome
+		} }
+		remove_from_variable_map = { name = tiger_registry key = title:k_france }
+		clear_variable_map = tiger_registry
+		add_to_variable_map = { name = tiger_missing_key value = root } # missing key
+		every_key_in_local_variable_map = { } # missing variable
+	}
+}

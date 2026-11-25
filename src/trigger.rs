@@ -35,7 +35,7 @@ use crate::script_value::validate_script_value;
 use crate::token::{Loc, Token};
 use crate::tooltipped::Tooltipped;
 use crate::validate::{
-    ListType, precheck_iterator_fields, validate_identifier, validate_ifelse_sequence,
+    ListType, open_iterator_scope, validate_identifier, validate_ifelse_sequence,
     validate_inside_iterator, validate_iterator_fields,
 };
 use crate::validator::Validator;
@@ -294,8 +294,7 @@ pub fn validate_trigger_internal(
             }
             sc.expect(inscopes, &Reason::Token(key.clone()), data);
             if let Some(block) = bv.expect_block() {
-                precheck_iterator_fields(ltype, it_name.as_str(), block, data, sc);
-                sc.open_scope(outscope, key.clone());
+                open_iterator_scope(outscope, key, ltype, it_name.as_str(), block, data, sc);
                 let mut vd = Validator::new(block, data);
                 vd.set_max_severity(max_sev);
                 side_effects |= validate_trigger_internal(
@@ -956,6 +955,14 @@ fn match_trigger_bv(
                 );
             }
         }
+        #[cfg(feature = "ck3")]
+        Trigger::VariableMapMembership => {
+            if let Some(block) = bv.expect_block() {
+                let mut vd = Validator::new(block, data);
+                vd.set_max_severity(max_sev);
+                crate::ck3::variable_maps::validate_membership(name, vd, data, sc);
+            }
+        }
         Trigger::Special => {
             if name.is("exists") {
                 if let Some(token) = bv.expect_value() {
@@ -1256,8 +1263,7 @@ fn match_trigger_bv(
         Trigger::Iterator(ltype, outscope) => {
             let it_name = name.split_once('_').unwrap().1;
             if let Some(block) = bv.expect_block() {
-                precheck_iterator_fields(*ltype, it_name.as_str(), block, data, sc);
-                sc.open_scope(*outscope, name.clone());
+                open_iterator_scope(*outscope, name, *ltype, it_name.as_str(), block, data, sc);
                 let mut vd = Validator::new(block, data);
                 vd.set_max_severity(max_sev);
                 side_effects |= validate_trigger_internal(
@@ -1879,6 +1885,14 @@ pub fn validate_argument(
         return;
     }
 
+    let func_lc = func.as_str().to_ascii_lowercase();
+    #[cfg(feature = "ck3")]
+    if Game::is_ck3()
+        && matches!(func_lc.as_str(), "variable_map" | "global_variable_map" | "local_variable_map")
+    {
+        crate::ck3::variable_maps::lookup(part_flags, func, arg, data, sc);
+        return;
+    }
     let scope_trigger_complex: fn(&str) -> Option<(Scopes, ArgumentValue, Scopes)> =
         match Game::game() {
             #[cfg(feature = "ck3")]
@@ -1893,7 +1907,6 @@ pub fn validate_argument(
             Game::Hoi4 => unreachable!(),
         };
 
-    let func_lc = func.as_str().to_ascii_lowercase();
     if let Some((inscopes, validation, outscopes)) = scope_trigger_complex(&func_lc) {
         sc.expect(inscopes, &Reason::Token(func.clone()), data);
         validate_argument_internal(arg, validation, data, sc);
@@ -2030,6 +2043,8 @@ pub enum Trigger {
     Control,
     /// this has specific code for validation
     Special,
+    #[cfg(feature = "ck3")]
+    VariableMapMembership,
 
     UncheckedValue,
     #[allow(dead_code)]
