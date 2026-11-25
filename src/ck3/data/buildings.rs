@@ -263,6 +263,7 @@ fn validate_trade_good_need(block: &Block, data: &Everything) {
     vd.field_item("trade_good", Item::TradeGoodType);
     vd.field_item("trade_good_category", Item::TradeGoodCategory);
     vd.field_validated("amount", validate_non_dynamic_script_value);
+    vd.field_integer("can_be_filled_multiple_times");
     // The trade good schema and vanilla entrepot buildings use this spelling.
     vd.field_bool("skip_internal_fulfillment");
     vd.advice_field("skip_internal_fullfilment", "vanilla uses skip_internal_fulfillment");

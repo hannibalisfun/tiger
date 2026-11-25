@@ -420,6 +420,7 @@ const SCOPE_EFFECT: &[(Scopes, &str, Effect)] = &[
     (Scopes::LandedTitle, "change_appointment_investment_for_anyone", Removed("1.20", "")),
     (Scopes::Confederation, "change_cohesion", ScriptValue),
     (Scopes::LandedTitle, "change_county_control", ScriptValue),
+    (Scopes::LandedTitle, "change_prosperity_level", ScriptValue),
     (Scopes::LandedTitle, "change_county_fertility", ScriptValue),
     (Scopes::Culture, "change_cultural_acceptance", Vb(validate_change_cultural_acceptance)),
     (Scopes::Character, "change_current_court_grandeur", ScriptValue),

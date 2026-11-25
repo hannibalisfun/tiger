@@ -8,5 +8,6 @@
   {"path":"common/buildings/tiger_buildings.txt","marker":"conflicting rite gates","key":"validation","contains":"expected exactly 1 of parameter, not_parameter"},
   {"path":"common/buildings/tiger_buildings.txt","marker":"garrison_reinforcement_factor = 1.5","key":"range","contains":"should be between"},
   {"path":"common/buildings/tiger_buildings.txt","marker":"construction_time = 0.25","key":"validation","contains":"expected integer"},
-  {"path":"common/buildings/tiger_buildings.txt","marker":"moved to district","key":"validation","contains":"parent district's type"}
+  {"path":"common/buildings/tiger_buildings.txt","marker":"moved to district","key":"validation","contains":"parent district's type"},
+  {"path":"common/buildings/tiger_buildings.txt","marker":"can_be_filled_multiple_times = 1.5","key":"validation","contains":"expected integer"}
 ]

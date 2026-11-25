@@ -246,6 +246,7 @@ pub const DLC_FEATURES_CK3: &[&str] = &[
     "landless_adventurer",
     "coronations",
     "all_under_heaven",
+    "silk_and_silver",
     "merit_admin",
     "advanced_aspirations",
     "high_medieval_warfare_attire",

@@ -683,6 +683,10 @@ const TRIGGER: &[(Scopes, &str, Trigger)] = &[
     (Scopes::Faith, "controls_holy_site_with_parameter", Item(Item::HolySiteParameter)),
     (Scopes::Character, "council_task_monthly_progress", CompareValue),
     (Scopes::LandedTitle, "county_control", CompareValue),
+    (Scopes::LandedTitle, "base_popular_opinion", CompareValue),
+    (Scopes::LandedTitle, "county_control_baseline", CompareValue),
+    (Scopes::LandedTitle, "prosperity_level", CompareValue),
+    (Scopes::Province, "province_size_level", CompareValue),
     (
         Scopes::LandedTitle,
         "county_control_rate",

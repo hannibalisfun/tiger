@@ -108,6 +108,11 @@ pub fn lookup_modif(name: &Token, data: &Everything, warn: Option<Severity>) -> 
 
     // men-at-arms types
     for &sfx in &[
+        "_control_value_add",
+        "_control_value_mult",
+        "_maintenance_high_modifier",
+        "_maintenance_low_modifier",
+        "_reinforcement_rate",
         "_damage_add",
         "_damage_mult",
         "_pursuit_add",
@@ -125,7 +130,7 @@ pub fn lookup_modif(name: &Token, data: &Everything, warn: Option<Severity>) -> 
                     name,
                     &s,
                     Item::MenAtArmsBase,
-                    ModifKinds::Province,
+                    ModifKinds::Province | ModifKinds::County,
                     data,
                     warn,
                 );

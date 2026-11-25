@@ -22,8 +22,13 @@
 		}
 	}
 	construction_time = 30
+	on_complete = { county = { change_prosperity_level = 1 } }
 	cost = { gold = 10 }
-	is_enabled = { scope:county = { is_coastal_county = yes } }
+	is_enabled = {
+		province_size_level >= 0
+		scope:county = { is_coastal_county = yes base_popular_opinion >= 0 county_control_baseline >= 0 prosperity_level >= 0 }
+	}
+	county_modifier = { stationed_light_cavalry_maintenance_high_modifier = 0.1 }
 	duchy_capital_county_modifier = { }
 	county_holding_modifier = { holding = castle_holding trade_good_cattle_production_add = 1 }
 	province_potential_trade_good_modifier = {
@@ -45,6 +50,7 @@
 	trade_good_need = {
 		trade_good = trade_good_cattle
 		amount = basic_resource_need
+		can_be_filled_multiple_times = 2
 		skip_internal_fulfillment = yes
 		potential_trade_good = trade_good_cattle
 		modifiers = { market_modifier = { trade_capacity_mult = 0.1 } }
@@ -64,6 +70,7 @@ tiger_workshop_02 = {
 	}
 	trade_good_need = {
 		trade_good = tiger_unknown_material
+		can_be_filled_multiple_times = 1.5
 	}
 	market_modifier = { stewardship = 1 } # invalid market modifier
 	market_size_modifier = { province_size = bad_market_size }
