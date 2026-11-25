@@ -1089,19 +1089,39 @@ pub fn validate_scope_chain(
 }
 
 pub fn validate_ifelse_sequence(block: &Block, key_if: &str, key_elseif: &str, key_else: &str) {
+    let ck3_trigger = Game::is_ck3() && key_if == "trigger_if";
+    let matches = |key: &Token, name: &str| {
+        if ck3_trigger { key.as_str().eq_ignore_ascii_case(name) } else { key.is(name) }
+    };
     let mut seen_if = false;
-    for (key, block) in block.iter_definitions() {
-        if key.is(key_if) {
+    let mut items = block.iter_items().peekable();
+    while let Some(item) = items.next() {
+        let Some((key, block)) = item.get_definition() else {
+            if ck3_trigger {
+                seen_if = false;
+            }
+            continue;
+        };
+        if matches(key, key_if) {
             seen_if = true;
             continue;
-        } else if key.is(key_elseif) {
+        } else if matches(key, key_elseif) {
             if !seen_if {
                 let msg = format!("`{key_elseif} without preceding `{key_if}`");
                 warn(ErrorKey::IfElse).msg(msg).loc(key).push();
             }
+            if ck3_trigger
+                && !items
+                    .peek()
+                    .and_then(|item| item.get_definition())
+                    .is_some_and(|(next, _)| matches(next, key_elseif) || matches(next, key_else))
+            {
+                let msg = "`trigger_else_if` without a following `trigger_else`";
+                err(ErrorKey::IfElse).msg(msg).loc(key).push();
+            }
             seen_if = true;
             continue;
-        } else if key.is(key_else) {
+        } else if matches(key, key_else) {
             if !seen_if {
                 let msg = format!("`{key_else} without preceding `{key_if}`");
                 warn(ErrorKey::IfElse).msg(msg).loc(key).push();

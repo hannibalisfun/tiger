@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
 
 use tiger_lib::{
@@ -32,7 +32,7 @@ fn take_report_contains(
     storage.retain(|report, occurrences| {
         if report.msg.contains(msg_contains) {
             if let Some(pointers) =
-                occurrences.extract_if(|p| p[0].loc.pathname() == pathname).next()
+                occurrences.extract_if(|p| p[0].loc.pathname() == Path::new(pathname)).next()
             {
                 result = Some(((*report).clone(), pointers));
                 if occurrences.is_empty() {
@@ -54,7 +54,7 @@ fn take_report(
     storage.retain(|report, occurrences| {
         if report.msg == msg {
             if let Some(pointers) =
-                occurrences.extract_if(|p| p[0].loc.pathname() == pathname).next()
+                occurrences.extract_if(|p| p[0].loc.pathname() == Path::new(pathname)).next()
             {
                 result = Some(((*report).clone(), pointers));
                 if occurrences.is_empty() {
@@ -79,7 +79,7 @@ fn take_report_pointer(
         if report.msg == msg {
             if let Some(pointers) = occurrences
                 .extract_if(|p| {
-                    p[0].loc.pathname() == pathname
+                    p[0].loc.pathname() == Path::new(pathname)
                         && p[0].loc.line == line
                         && p[0].loc.column == column
                 })
@@ -101,7 +101,7 @@ fn ignore_reports(
     pathname: &str,
 ) {
     storage.retain(|_, occurrences| {
-        occurrences.retain(|p| p[0].loc.pathname() != pathname);
+        occurrences.retain(|p| p[0].loc.pathname() != Path::new(pathname));
         if occurrences.is_empty() {
             return false;
         }
@@ -170,6 +170,15 @@ fn test_mod1() {
     let events = "events/test-script-values.txt";
     let report = take_report_contains(&mut reports, events, "`else` with a `limit`");
     report.expect("scriptvalue else with a limit");
+
+    let chains = "common/on_action/test-trigger-chains.txt";
+    let msg = "`trigger_else_if` without a following `trigger_else`";
+    let mut lines = Vec::new();
+    while let Some((_, pointers)) = take_report(&mut reports, chains, msg) {
+        lines.push(pointers[0].loc.line);
+    }
+    lines.sort_unstable();
+    assert_eq!(lines, [5, 12], "interrupted and nested unterminated trigger chains");
 
     dbg!(&reports);
     assert!(reports.is_empty());
