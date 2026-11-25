@@ -21,9 +21,7 @@ use crate::lowercase::Lowercase;
 #[cfg(feature = "jomini")]
 use crate::report::fatal;
 use crate::report::{Confidence, ErrorKey, Severity, err, report, warn};
-#[cfg(any(feature = "ck3", feature = "hoi4"))]
-use crate::scopes::Scopes;
-use crate::scopes::{scope_prefix, scope_to_scope};
+use crate::scopes::{Scopes, scope_prefix, scope_to_scope};
 #[cfg(feature = "jomini")]
 use crate::script_value::{validate_non_dynamic_script_value, validate_script_value};
 use crate::token::Token;
