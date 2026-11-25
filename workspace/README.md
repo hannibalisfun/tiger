@@ -1,6 +1,14 @@
-# CK3 1.21 first pass
+# CK3 1.21 port and workspace runner
 
-This branch starts from pharaox's `adapt/ck3-1.20.1.1` at `9f61d918`. Its first pass covers the 1.21 province-to-district links, district back-links, the regular and owned trade-post district iterators, and the receiver and argument types for `add_building`. It also reports a CK3 `trigger_else_if` chain that ends or is interrupted before a sibling `trigger_else`. The inherited faith and rite loaders support PoD's hunter faiths. The district and building validators also cover holding definitions, building needs and market modifiers, district assets and construction callbacks, and dated province history. They resolve item references across the game and ordered parents. The trade pass loads goods, categories, county production potential, toll levels, trader tasks, goods graphics, roads and road modifiers. It checks trade and road scope transitions, iterators, triggers, effects and modifier use areas. Road definitions are checked against province IDs. Binary road geometry is outside the script validator.
+This branch starts from pharaox's `adapt/ck3-1.20.1.1` at `9f61d918`. The workspace uses the CK3 1.21.0 schemas and engine exports and runs the acceptance tests against 1.21.0.3. The port is partial.
+
+| Area | Checks |
+| --- | --- |
+| Districts and buildings | District and holding definitions, building needs and modifiers, scoped construction, assets, and province history across dates and load layers. |
+| Trade and roads | Goods, categories, county potential goods, toll levels, trader tasks, goods graphics, roads, and road modifiers. Script checks cover market and route operations, monopolies, typed iterator filters, and scope transitions. |
+| Variable maps | Scoped, global, and local storage, key and value lookups, iterators, duration, and quoted macro arguments. Local maps track writes and clears in the call context. Persistent maps combine known write types and leave dynamic writes unconstrained. |
+| GUI data types | The five 1.21 engine exports supply types, functions, promotes and argument counts. Literal database getters resolve through the load order. Known province and character arguments on building and district methods are type-checked. |
+| Earlier cases | District construction scope and complete `trigger_else_if` chains. The inherited faith and rite loaders resolve PoD's hunter faiths. |
 
 ## Build and run
 
@@ -38,11 +46,25 @@ Caching is opt-in. The baseline key includes the binary and rules, game version,
 
 ```powershell
 py -3 -B workspace/tests/first_pass.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
-py -3 -B workspace/tests/port_passes.py --pass districts --pass trade --workspace .. --game $game --tiger target/release/ck3-tiger.exe
+py -3 -B workspace/tests/port_passes.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
 py -3 -B workspace/tests/test_runner.py
 cargo test --locked -p tiger-lib
 ```
 
 The live acceptance command checks the exact five fixture diagnostics and their source lines, seven optional Silver Pack references with Camp Pressure and PoD alone, and zero warnings or errors with all three siblings. The fixture also exercises the valid district and trigger forms. The runner tests use a temporary game fixture to exercise baseline reuse, invalidation, and failure handling. These checks require no changes to the installed game, the reference snapshots, or the mods under test.
 
-The schema fixtures use the public runner and PoD as a parent. Each expected error has a source marker, diagnostic key and message check. Any additional warning or error fails the pass.
+To rerun one area, add `--pass districts`, `--pass trade`, `--pass maps`, or `--pass gui` to `port_passes.py`. The schema fixtures use the public runner and PoD as a parent. Each expected error has a source marker, diagnostic key and message check. Any additional warning or error fails the pass.
+
+Road definitions are checked against province IDs. Binary spline geometry requires a separate check. For `has_trade_good_type` the export declares a trade-good receiver and describes a trade route. Neither local source tree contains a resolving call, so Tiger uses the declared receiver. GUI arguments that the engine exports only as `Arg0`, `Arg1`, and so on retain unknown types unless a verified signature is available.
+
+### Reference-file checks on 1.21.0.3
+
+These runs copied the named reference files into a temporary primary mod at their original relative paths. Vanilla probes used the installed game alone. PoD probes also loaded PoD as the parent.
+
+| Primary files | Shared runner result |
+| --- | --- |
+| The ten shipped definitions under `common/trade`, `common/trade_tasks`, `common/trade_goods_graphics` and `common/roads` | Zero warnings or errors. |
+| PoD `POD_grand_city_effects.txt` | 21 warnings or errors before the map and prosperity changes, zero after. |
+| Vanilla `gui/window_trade_good.gui` | 28 data-function warnings or errors before the GUI refresh, zero after. |
+| PoD `00_PoD_regular_districts.txt` and the Grand City primary-building and holding-district files | Two missing references to `district_civic`, both in the regular districts file. |
+| All 85 vanilla building files, 11 district files and one holdings file | Zero unknown fields or tokens. The 604 remaining warnings and errors cover modifier use areas, tooltip complexity, asset or format references, scopes, and duplicate fields. |
