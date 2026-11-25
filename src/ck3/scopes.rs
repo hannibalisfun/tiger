@@ -10,6 +10,9 @@ pub fn needs_prefix(arg: &str, data: &Everything, scopes: Scopes) -> Option<&'st
     if scopes == Scopes::ActivityType && data.item_exists(Item::ActivityType, arg) {
         return Some("activity_type");
     }
+    if scopes == Scopes::BuildingType && data.item_exists(Item::Building, arg) {
+        return Some("building_type");
+    }
     if scopes == Scopes::Character && data.item_exists(Item::Character, arg) {
         return Some("character");
     }

@@ -147,6 +147,9 @@ bitflags! {
         #[cfg(feature = "ck3")] const Rite = 1<<77;
         #[cfg(feature = "ck3")] const RiteType = 1<<78;
         #[cfg(feature = "ck3")] const Tenet = 1<<79;
+        // CK3 1.21
+        #[cfg(feature = "ck3")] const District = 1<<80;
+        #[cfg(feature = "ck3")] const BuildingType = 1<<81;
 
         #[cfg(feature = "vic3")] const Battle = 1<<16;
         #[cfg(feature = "vic3")] const BattleSide = 1<<17;

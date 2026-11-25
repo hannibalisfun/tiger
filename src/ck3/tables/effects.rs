@@ -79,7 +79,7 @@ const SCOPE_EFFECT: &[(Scopes, &str, Effect)] = &[
     (Scopes::Artifact, "add_artifact_title_history", Vb(validate_add_artifact_title_history)),
     (Scopes::War, "add_attacker", Scope(Scopes::Character)),
     (Scopes::Character, "add_barter_goods", ScriptValue), // TODO: no docs on effect value
-    (Scopes::Province, "add_building", Item(Item::Building)),
+    (Scopes::District, "add_building", ScopeOrItem(Scopes::BuildingType, Item::Building)),
     (
         Scopes::all(),
         "add_building_slot",
