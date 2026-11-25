@@ -320,7 +320,7 @@ impl<'a> ValueValidator<'a> {
 
     /// Expect the value to be a number with up to 5 decimals within the `range` provided.
     /// (5 decimals is the limit accepted by the game engine in most contexts).
-    #[cfg(feature = "vic3")]
+    #[cfg(any(feature = "ck3", feature = "vic3"))]
     pub fn numeric_range<R: RangeBounds<f64>>(&mut self, range: R) {
         if self.validated {
             return;

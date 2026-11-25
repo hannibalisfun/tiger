@@ -28,6 +28,9 @@ pub fn needs_prefix(arg: &str, data: &Everything, scopes: Scopes) -> Option<&'st
     if scopes == Scopes::Decision && data.item_exists(Item::Decision, arg) {
         return Some("decision");
     }
+    if scopes == Scopes::DistrictType && data.item_exists(Item::DistrictType, arg) {
+        return Some("district_type");
+    }
     if scopes == Scopes::Doctrine && data.item_exists(Item::Doctrine, arg) {
         return Some("doctrine");
     }

@@ -150,6 +150,8 @@ bitflags! {
         // CK3 1.21
         #[cfg(feature = "ck3")] const District = 1<<80;
         #[cfg(feature = "ck3")] const BuildingType = 1<<81;
+        #[cfg(feature = "ck3")] const DistrictType = 1<<82;
+        #[cfg(feature = "ck3")] const Building = 1<<83;
 
         #[cfg(feature = "vic3")] const Battle = 1<<16;
         #[cfg(feature = "vic3")] const BattleSide = 1<<17;

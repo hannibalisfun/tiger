@@ -28,6 +28,18 @@ use crate::validate::{
 };
 use crate::validator::{Validator, ValueValidator};
 
+pub fn validate_random_district_building(
+    _key: &Token,
+    _block: &Block,
+    _data: &Everything,
+    sc: &mut ScopeContext,
+    mut vd: Validator,
+    _tooltipped: Tooltipped,
+) {
+    vd.req_field("district");
+    vd.field_item_or_target("district", sc, Item::DistrictType, Scopes::District);
+}
+
 pub fn validate_add_activity_log_entry(
     key: &Token,
     block: &Block,

@@ -1,0 +1,14 @@
+[
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"mismatched primary","key":"validation","contains":"uses `city_holding_district`"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"tiger_history_missing_district","key":"missing-item","contains":"tiger_history_missing_district"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"tiger_history_missing_building","key":"missing-item","contains":"tiger_history_missing_building"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"invalid_history_level","key":"validation","contains":"expected integer"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"trade post in districts","key":"validation","contains":"trade post district"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"regular in special slot","key":"validation","contains":"requires type `special`"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"tiger_history_missing_entrepot","key":"missing-item","contains":"tiger_history_missing_entrepot"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"missing trade post owner","key":"field-missing","contains":"required field `owner` missing"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"special in trade post slot","key":"validation","contains":"requires type `trade_post`"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"district on auto holding","key":"validation","contains":"explicit holding type"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"tiger_history_missing_owner","key":"missing-item","contains":"tiger_history_missing_owner"},
+  {"path":"history/provinces/zz_tiger_district_history.txt","marker":"invalid_history_size","key":"validation","contains":"expected integer"}
+]

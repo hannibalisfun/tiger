@@ -1869,7 +1869,7 @@ impl<'a> Validator<'a> {
     #[cfg(any(feature = "ck3", feature = "hoi4"))]
     pub fn validate_history_blocks<F>(&mut self, mut f: F)
     where
-        F: FnMut(Date, &Token, &Block, &Everything),
+        F: FnMut(Date, &'a Token, &'a Block, &'a Everything),
     {
         for Field(key, cmp, bv) in self.block.iter_fields() {
             if let Ok(date) = Date::try_from(key) {

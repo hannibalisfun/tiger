@@ -1,0 +1,12 @@
+[
+  {"path":"common/buildings/tiger_buildings.txt","marker":"conflicting need selectors","key":"validation","contains":"expected exactly 1 of trade_good, trade_good_category"},
+  {"path":"common/buildings/tiger_buildings.txt","marker":"tiger_unknown_material","key":"missing-item","contains":"tiger_unknown_material"},
+  {"path":"common/buildings/tiger_buildings.txt","marker":"invalid market modifier","key":"modifiers","contains":"expected trade market"},
+  {"path":"common/buildings/tiger_buildings.txt","marker":"bad_market_size","key":"validation","contains":"expected integer"},
+  {"path":"common/buildings/tiger_buildings.txt","marker":"tiger_unknown_province_good","key":"missing-item","contains":"tiger_unknown_province_good"},
+  {"path":"common/buildings/tiger_buildings.txt","marker":"tiger_unknown_government_flag","key":"missing-item","contains":"tiger_unknown_government_flag"},
+  {"path":"common/buildings/tiger_buildings.txt","marker":"conflicting rite gates","key":"validation","contains":"expected exactly 1 of parameter, not_parameter"},
+  {"path":"common/buildings/tiger_buildings.txt","marker":"garrison_reinforcement_factor = 1.5","key":"range","contains":"should be between"},
+  {"path":"common/buildings/tiger_buildings.txt","marker":"construction_time = 0.25","key":"validation","contains":"expected integer"},
+  {"path":"common/buildings/tiger_buildings.txt","marker":"moved to district","key":"validation","contains":"parent district's type"}
+]

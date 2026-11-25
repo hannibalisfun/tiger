@@ -1,0 +1,57 @@
+﻿4582 = {
+	# Tunis inherits castle_holding from PoD province history.
+	1599.1.1 = {
+		province_size = 5
+		special_district_slot = carthage_01_district
+		entrepot_district_slot = entrepot_location_district
+		districts = {
+			district = {
+				type = castle_holding_district
+				level = 2
+				buildings = { castle_garrison_1 }
+			}
+			district = { type = POD_wod_district }
+		}
+		trade_post = {
+			type = trade_post_location_district
+			owner = 795200
+			buildings = { trade_counting_house_01 }
+		}
+	}
+	# The city holding takes effect on the earlier date below.
+	1602.1.1 = {
+		districts = { district = { type = city_holding_district } }
+	}
+	1601.1.1 = { holding = city_holding }
+	1601.1.1 = {
+		districts = { district = { type = POD_wod_district } }
+	}
+	1603.1.1 = {
+		districts = {
+			district = { type = temple_holding_district } # mismatched primary
+			district = { type = tiger_history_missing_district }
+			district = {
+				type = city_holding_district
+				buildings = { tiger_history_missing_building }
+				level = invalid_history_level
+			}
+			district = { type = trade_post_location_district } # trade post in districts
+		}
+		special_district_slot = POD_wod_district # regular in special slot
+		entrepot_district_slot = tiger_history_missing_entrepot
+		trade_post = { # missing trade post owner
+			type = carthage_01_district # special in trade post slot
+		}
+	}
+	1604.1.1 = { holding = auto }
+	1605.1.1 = {
+		districts = { # district on auto holding
+			district = { type = POD_wod_district }
+		}
+		trade_post = {
+			type = trade_post_location_district
+			owner = tiger_history_missing_owner
+		}
+		province_size = invalid_history_size
+	}
+}

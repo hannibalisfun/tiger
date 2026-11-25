@@ -1,0 +1,79 @@
+﻿tiger_workshop_01 = {
+	next_building = tiger_workshop_02
+	triggered_name = {
+		trigger = { is_coastal = yes }
+		reference = tiger_coastal_workshop
+	}
+	triggered_name = {
+		trigger = { terrain = hills }
+		reference = tiger_hill_workshop
+	}
+	district_level_requirement = {
+		value = 1
+		if = {
+			limit = { scope:holder = { age >= 16 } scope:county = { is_coastal_county = yes } }
+			add = 1
+		}
+	}
+	effect_desc = {
+		triggered_desc = {
+			trigger = { is_coastal = yes scope:holder = { age >= 16 } }
+			desc = tiger_coastal_workshop
+		}
+	}
+	construction_time = 30
+	cost = { gold = 10 }
+	is_enabled = { scope:county = { is_coastal_county = yes } }
+	duchy_capital_county_modifier = { }
+	county_holding_modifier = { holding = castle_holding trade_good_cattle_production_add = 1 }
+	province_potential_trade_good_modifier = {
+		trade_good = trade_good_cattle
+		levy_size = 0.1
+	}
+	character_rite_modifier = {
+		not_parameter = fae_morality_seelie_opinion_active
+		stewardship = 1
+	}
+	market_size_modifier = { province_size = 2 trade_capacity_mult = 0.1 }
+	market_rite_modifier = {
+		not_parameter = fae_morality_seelie_opinion_active
+		trade_capacity_mult = 0.1
+	}
+	fallback = {
+		market_terrain_modifier = { is_coastal = yes terrain = hills trade_capacity_mult = 0.05 }
+	}
+	trade_good_need = {
+		trade_good = trade_good_cattle
+		amount = basic_resource_need
+		skip_internal_fulfillment = yes
+		potential_trade_good = trade_good_cattle
+		modifiers = { market_modifier = { trade_capacity_mult = 0.1 } }
+	}
+	trade_good_need = {
+		trade_good_category = trade_category_cereals
+		is_riverside = no
+		not_rite_parameter = fae_morality_seelie_opinion_active
+		modifiers = { character_modifier = { stewardship = 1 } }
+	}
+}
+
+tiger_workshop_02 = {
+	trade_good_need = { # conflicting need selectors
+		trade_good = trade_good_cattle
+		trade_good_category = trade_category_cereals
+	}
+	trade_good_need = {
+		trade_good = tiger_unknown_material
+	}
+	market_modifier = { stewardship = 1 } # invalid market modifier
+	market_size_modifier = { province_size = bad_market_size }
+	province_potential_trade_good_modifier = { trade_good = tiger_unknown_province_good }
+	market_government_modifier = { not_parameter = tiger_unknown_government_flag }
+	character_rite_modifier = { # conflicting rite gates
+		parameter = fae_morality_seelie_opinion_active
+		not_parameter = fae_morality_seelie_opinion_active
+	}
+	garrison_reinforcement_factor = 1.5
+	construction_time = 0.25
+	type = duchy_capital # moved to district
+}

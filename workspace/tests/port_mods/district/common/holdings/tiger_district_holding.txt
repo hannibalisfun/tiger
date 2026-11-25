@@ -1,0 +1,5 @@
+﻿tiger_schema_holding = {
+	primary_district = tiger_schema_district
+	districts = { POD_wod_district tiger_missing_holding_district }
+	parameters = { no_buildings }
+}

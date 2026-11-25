@@ -11,7 +11,7 @@ These games are grand strategy games made by Paradox Interactive, and user mods 
 
 ## Status
 
-This workspace branch ports pharaox's CK3 1.20.1.1 rules to CK3 1.21 in stages. The first pass covers district scope for construction and unterminated trigger chains. Build instructions, supported load orders, and the regression suite are in the [PoD runner guide](workspace/README.md).
+This workspace branch ports pharaox's CK3 1.20.1.1 rules to CK3 1.21 in stages. The port covers district and building schemas, construction scopes, province history, and unterminated trigger chains. Build instructions, supported load orders, and the regression suite are in the [PoD runner guide](workspace/README.md).
 
 Tiger is mature but will still warn about some things that are actually correct. It will also often take a few days or even weeks to catch up with the latest updates to the games it supports.
 

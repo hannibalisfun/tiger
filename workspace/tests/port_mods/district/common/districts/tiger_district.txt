@@ -1,0 +1,27 @@
+﻿tiger_schema_district = {
+	type = resource
+	color = district_economy
+	primary_building = pb_wod_01
+	buildings = { hearth_01 tiger_missing_district_building }
+	unlocked_by = POD_wod_district
+	triggered_name = {
+		trigger = { terrain = hills }
+		reference = guild_district
+	}
+	background = { reference = "gfx/interface/illustrations/decisions/decision_castle_view.dds" }
+	can_be_replaced = yes
+	is_enabled = {
+		scope:holder = { is_adult = yes }
+		scope:county = { tier = tier_county }
+	}
+	can_rebuild = { always = yes } # repair is restricted to great districts
+	can_construct = {
+		province_has_district = district_type:POD_wod_district
+		any_built_buildings = {
+			include_inactive = yes
+			is_building_or_higher = pb_wod_01
+			building_district.district_type = { district_slot_type = resource }
+			building_type = { has_next_building_level = yes }
+		}
+	}
+}

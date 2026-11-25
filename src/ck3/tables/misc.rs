@@ -701,6 +701,7 @@ pub const COMMON_DIRS: &[&str] = &[
     "common/defines",
     "common/diarchies/diarchy_mandates",
     "common/diarchies/diarchy_types",
+    "common/districts",
     "common/dna_data",
     "common/domiciles/buildings",
     "common/domiciles/types",

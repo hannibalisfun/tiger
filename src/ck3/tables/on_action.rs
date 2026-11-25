@@ -828,7 +828,7 @@ pub const ON_ACTION_SCOPES: &str = "
 		recipient = character
 	}
 
-	on_great_building_rebuilt = {
+	on_great_district_rebuilt = {
 		root = character
 		province = province
 	}

@@ -1,0 +1,26 @@
+[
+  {
+    "path": "common/districts/tiger_district.txt",
+    "marker": "tiger_missing_district_building",
+    "key": "missing-item",
+    "contains": "tiger_missing_district_building"
+  },
+  {
+    "path": "common/districts/tiger_district.txt",
+    "marker": "# repair is restricted",
+    "key": "validation",
+    "contains": "only for great districts"
+  },
+  {
+    "path": "common/holdings/tiger_district_holding.txt",
+    "marker": "tiger_missing_holding_district",
+    "key": "missing-item",
+    "contains": "tiger_missing_holding_district"
+  },
+  {
+    "path": "common/decisions/tiger_district_actions.txt",
+    "marker": "# removed in 1.21",
+    "key": "removed",
+    "contains": "add_special_building_slot"
+  }
+]

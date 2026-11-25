@@ -308,6 +308,7 @@ pub enum Item {
     #[cfg(feature = "ck3")] DiarchyMandate,
     #[cfg(feature = "ck3")] DiarchyParameter,
     #[cfg(feature = "ck3")] DiarchyType,
+    #[cfg(feature = "ck3")] DistrictType,
     #[cfg(feature = "ck3")] Doctrine,
     #[cfg(feature = "ck3")] DoctrineCategory,
     #[cfg(feature = "ck3")] DoctrineGroup,
@@ -448,6 +449,8 @@ pub enum Item {
     #[cfg(feature = "ck3")] Tenet,
     #[cfg(feature = "ck3")] Title,
     #[cfg(feature = "ck3")] TitleHistory,
+    #[cfg(feature = "ck3")] TradeGoodType,
+    #[cfg(feature = "ck3")] TradeGoodCategory,
     #[cfg(feature = "ck3")] TraitCategory,
     #[cfg(feature = "ck3")] TraitFlag,
     #[cfg(feature = "ck3")] TraitPortraitModifier,
@@ -1412,6 +1415,8 @@ impl Item {
             #[cfg(feature = "ck3")]
             Item::DiarchyType => "common/diarchies/diarchy_types/",
             #[cfg(feature = "ck3")]
+            Item::DistrictType => "common/districts/",
+            #[cfg(feature = "ck3")]
             Item::Doctrine => "common/religion/doctrine_types/",
             #[cfg(feature = "ck3")]
             Item::DoctrineCategory => "common/religion/doctrine_category_types/",
@@ -1691,6 +1696,10 @@ impl Item {
             Item::Title => "common/landed_titles/",
             #[cfg(feature = "ck3")]
             Item::TitleHistory => "history/titles/",
+            #[cfg(feature = "ck3")]
+            Item::TradeGoodType => "common/trade/trade_good_types/",
+            #[cfg(feature = "ck3")]
+            Item::TradeGoodCategory => "common/trade/trade_good_categories/",
             #[cfg(feature = "ck3")]
             Item::TraitCategory => "",
             #[cfg(feature = "ck3")]

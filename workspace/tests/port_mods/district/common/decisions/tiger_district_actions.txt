@@ -1,0 +1,22 @@
+﻿tiger_district_actions = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_castle_view.dds" }
+	decision_group_type = pod_splat
+	ai_check_interval = 0
+	effect = {
+		capital_province = {
+			add_regular_district = POD_wod_district
+			build_random_district_building = { district = POD_wod_district }
+			add_trade_post_district = { district = trade_post_location_district owner = root }
+			every_built_regular_district = {
+				save_scope_as = tiger_district
+				district_province = { remove_random_district_building = { district = scope:tiger_district } }
+				every_district_building = {
+					include_inactive = yes
+					upgrade_this_building = yes
+					building_district = { upgrade_building_effect = building_type:pb_wod_01 }
+				}
+			}
+			add_special_building_slot = alamut_01 # removed in 1.21
+		}
+	}
+}
