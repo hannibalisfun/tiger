@@ -19,6 +19,7 @@ import impact_git
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BINARY = ROOT / "target/release" / ("ck3-tiger.exe" if os.name == "nt" else "ck3-tiger")
 SEVERITIES = ("tips", "untidy", "warning", "error", "fatal")
+POD_OPTIONAL_VARIABLES = ("asakku_depth",)
 CACHE_FORMAT = 1
 
 
@@ -46,10 +47,11 @@ def descriptor(root, work, label):
     return temporary
 
 
-def configuration(work, parents, show_parents, show_vanilla):
+def configuration(work, parents, show_parents, show_vanilla, optional_variables):
     config = work / "runner.conf"
     settings = [
         'languages = { check = "english" }',
+        'optional_variables = { ' + ' '.join(quoted(name) for name in optional_variables) + ' }',
         'filter = { show_loaded_mods = %s show_vanilla = %s }' % (
             "yes" if show_parents else "no", "yes" if show_vanilla else "no"),
     ]
@@ -157,10 +159,11 @@ def json_rows(stream):
 
 
 @contextmanager
-def tiger_command(tiger, game, mod, parents, *, stable, show_parents, show_vanilla, symbol=None, impact_files=None):
+def tiger_command(tiger, game, mod, parents, *, stable, show_parents, show_vanilla,
+                 optional_variables=POD_OPTIONAL_VARIABLES, symbol=None, impact_files=None):
     with tempfile.TemporaryDirectory(prefix="ck3-tiger-") as folder:
         work = Path(folder)
-        conf = configuration(work, parents, show_parents, show_vanilla)
+        conf = configuration(work, parents, show_parents, show_vanilla, optional_variables)
         command = [tiger, "--game", game, "--config", conf, "--json", "--no-color", "--pod"]
         if stable:
             command.append("--deterministic")
@@ -328,7 +331,8 @@ def validate(args):
     if build.get("validator") != "ck3-tiger" or not build.get("build") or not build.get("rules"):
         raise ValueError("Expected a CK3 port build with build-info")
     version = json.loads((game / "launcher/launcher-settings.json").read_text(encoding="utf-8-sig"))["rawVersion"]
-    settings = dict(stable=bool(baseline or args.deterministic),
+    settings = dict(optional_variables=sorted(set(POD_OPTIONAL_VARIABLES).union(args.optional_variable)),
+                    stable=bool(baseline or args.deterministic),
                     show_parents=bool(baseline or args.show_parents), show_vanilla=args.show_vanilla)
     with binary.open("rb") as exe:
         sha = hashlib.file_digest(exe, "sha256").hexdigest()
@@ -378,6 +382,8 @@ def main():
     parser.add_argument("--mod", required=True, help="Primary mod directory or bare drop-in tree")
     parser.add_argument("--parent", action="append", default=[], help="Loaded parent directory, lowest priority first")
     parser.add_argument("--tiger", type=Path, default=DEFAULT_BINARY)
+    parser.add_argument("--optional-variable", action="append", default=[], metavar="NAME",
+                        help="Also check reads of this scoped variable (repeatable). The PoD default is asakku_depth.")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--lookup", metavar="SYMBOL", help="Show loaded definitions, known callers and on-action firing paths")
     mode.add_argument("--impact", nargs="?", const="HEAD", metavar="REV",

@@ -5,6 +5,7 @@ pub mod effect_validation;
 pub mod events;
 pub(crate) mod flag_conversion;
 pub mod modif;
+pub(crate) mod optional_variables;
 pub mod scopes;
 pub mod tables;
 pub mod validate;

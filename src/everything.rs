@@ -824,6 +824,11 @@ impl Everything {
             self.database.scan_variables(&mut self.variables);
         });
         #[cfg(feature = "ck3")]
+        {
+            self.variables.optional.configure(&self.config);
+            self.variables.optional.removals = self.variables.optional.effect_removals(self);
+        }
+        #[cfg(feature = "ck3")]
         if let Some(lookup) = &mut self.lookup_callers
             && !lookup.include_unresolved
             && lookup.queries.includes_on_action(&self.on_actions)
@@ -956,6 +961,8 @@ impl Everything {
             s.spawn(|_| self.database.validate(self));
         });
         self.localization.validate_pass2(self);
+        #[cfg(feature = "ck3")]
+        self.variables.optional.report();
     }
 
     pub fn check_rivers(&mut self) {

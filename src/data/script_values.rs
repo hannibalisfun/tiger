@@ -109,7 +109,10 @@ impl ScriptValues {
     pub fn validate_call(&self, key: &Token, data: &Everything, sc: &mut ScopeContext) {
         if let Some(item) = self.script_values.get(key.as_str()) {
             #[cfg(feature = "ck3")]
-            data.record_caller(Item::ScriptValue, key, Some(&item.key));
+            {
+                data.record_caller(Item::ScriptValue, key, Some(&item.key));
+                data.variables.optional.call(sc, key, item.key.loc);
+            }
             item.validate_call(key, data, sc);
         }
     }
@@ -204,6 +207,10 @@ impl ScriptValue {
     pub fn validate_call(&self, key: &Token, data: &Everything, sc: &mut ScopeContext) {
         if !self.cached_compat(key, sc, data) {
             let mut our_sc = ScopeContext::new_unrooted(Scopes::all(), &self.key);
+            #[cfg(feature = "ck3")]
+            {
+                our_sc.optional.script = Some(self.key.loc);
+            }
             our_sc.set_strict_scopes(false);
             if self.scope_override.is_some() {
                 our_sc.set_no_warn(true);

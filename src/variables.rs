@@ -9,6 +9,8 @@ use crate::token::Token;
 #[derive(Debug)]
 pub struct Variables {
     #[cfg(feature = "ck3")]
+    pub(crate) optional: crate::ck3::optional_variables::OptionalVariables,
+    #[cfg(feature = "ck3")]
     pub(crate) maps: crate::ck3::variable_maps::PersistentMaps,
     names: TigerHashSet<&'static str>,
     // For hoi4: variables that were defined with @something at the end, here without the @ part.
@@ -27,6 +29,8 @@ pub struct Variables {
 impl Variables {
     pub fn new() -> Self {
         Self {
+            #[cfg(feature = "ck3")]
+            optional: Default::default(),
             #[cfg(feature = "ck3")]
             maps: crate::ck3::variable_maps::PersistentMaps::default(),
             names: TigerHashSet::default(),

@@ -136,6 +136,17 @@ pub fn validate_effect_internal(
     }
 
     validate_ifelse_sequence(block, "if", "else_if", "else");
+    #[cfg(feature = "ck3")]
+    let before = sc.optional.saved_presence();
+    #[cfg(feature = "ck3")]
+    if matches!(caller.as_str(), "if" | "else_if" | "else" | "while") || list_type != ListType::None
+    {
+        data.variables.optional.guard(sc, block, "limit");
+    }
+    #[cfg(feature = "ck3")]
+    if list_type != ListType::None {
+        data.variables.optional.guard(sc, block, "filter");
+    }
 
     vd.set_allow_questionmark_equals(true);
     let mut has_tooltip = false;
@@ -143,6 +154,10 @@ pub fn validate_effect_internal(
         has_tooltip |=
             validate_effect_field(caller, key, cmp, bv, data, sc, tooltipped, special_tokens);
     });
+    #[cfg(feature = "ck3")]
+    if caller != "hidden_effect" {
+        sc.optional.leave_branch(&before);
+    }
     has_tooltip
 }
 
@@ -209,6 +224,8 @@ pub fn validate_effect_field(
                 }
             }
         }
+        #[cfg(feature = "ck3")]
+        data.variables.optional.after_effect(sc, effect.key.loc);
         return has_tooltip && tooltipped.is_tooltipped();
     }
 
@@ -452,6 +469,10 @@ pub fn validate_effect_field(
             Effect::Unchecked => (),
             #[cfg(any(feature = "ck3", feature = "vic3", feature = "eu5", feature = "hoi4"))]
             Effect::UncheckedTodo => (),
+        }
+        #[cfg(feature = "ck3")]
+        if key.lowercase_is("set_variable") || key.lowercase_is("remove_variable") {
+            data.variables.optional.write(sc, bv, key.lowercase_is("remove_variable"));
         }
         return has_tooltip && tooltipped.is_tooltipped();
     }

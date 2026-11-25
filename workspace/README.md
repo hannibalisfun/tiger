@@ -9,6 +9,7 @@ This branch starts from pharaox's `adapt/ck3-1.20.1.1` at `9f61d918`. The worksp
 | Variable maps | Scoped, global, and local storage, key and value lookups, iterators, duration, and quoted macro arguments. Local maps track writes and clears in the call context. Persistent maps combine known write types and leave dynamic writes unconstrained. |
 | GUI data types | The five 1.21 engine exports supply types, functions, promotes and argument counts. Literal database getters resolve through the load order. Known province and character arguments on building and district methods are type-checked. |
 | Flag conversion | `flag-conversion` reports a flag-valued variable copied through `save_scope_value_as`. It points to the copy and the source of the type evidence or a later flag comparison on the saved result. |
+| Optional variables | `optional-variable` traces reads through scripted effects, scripted triggers and script values. It points to the call that can reach an unguarded read and to the read itself. |
 | On-action conflicts | `on-action-conflict` warns when a named hook has competing `effect` or `trigger` blocks. Each warning labels the ignored block and the winning block at their source lines. |
 | Earlier cases | District construction scope and complete `trigger_else_if` chains. The inherited faith and rite loaders resolve PoD's hunter faiths. |
 
@@ -95,6 +96,8 @@ Caching is opt-in. The baseline key includes the binary and rules, game version,
 py -3 -B workspace/tests/first_pass.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
 py -3 -B workspace/tests/port_passes.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
 py -3 -B workspace/tests/on_action_conflicts.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
+py -3 -B workspace/tests/optional_variables.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
+py -3 -B workspace/tests/test_optional_variables.py
 py -3 -B workspace/tests/test_runner.py
 py -3 -B workspace/tests/test_lookup.py
 py -3 -B workspace/tests/test_impact.py
@@ -107,6 +110,10 @@ The live acceptance command checks the exact five fixture diagnostics and their 
 To rerun one area, add `--pass districts`, `--pass trade`, `--pass maps`, `--pass gui`, or `--pass flags` to `port_passes.py`. The fixtures use the public runner and PoD as a parent. Each expected error has a source marker, diagnostic key and message check. Any additional warning or error fails the pass.
 
 The combat fixture checks flag values reached through a saved object, a chain of variables, a guarded read and an expanded macro. A direct `set_variable` copy preserves the flag, including `value = scope:candidate_slot.var:combat_team`. Saving a literal such as `flag:player` or a numeric script value also passes. The diagnostic requires local evidence from a write, a guard or a later flag comparison. Across opaque calls and uncertain branches, a conversion can remain undetected.
+
+The Asakku fixture calls the same raw `var:asakku_depth` reader from two paths. The caller inside `if = { limit = { has_variable = asakku_depth } ... }` passes. Adding a call outside the branch produces one warning with both source lines. PoD's `POD_asakku_depth` value can be used directly when an absent depth should count as zero.
+
+The runner declares `asakku_depth` in Tiger's `optional_variables` configuration, so the check still applies when an overlay replaces that accessor. Pass `--optional-variable NAME` for each additional scoped variable to check. The selected names appear in JSON metadata and in the baseline cache key. A positive `has_variable` or `exists = var:name` guard, or an earlier unconditional `set_variable`, establishes presence on the current object. A possible removal invalidates that proof. Tiger treats an intervening parameterized effect as a possible removal. The check follows resolved calls and requires evidence that the guard and read use the same object.
 
 The on-action check follows Tiger's effective file order and selects the `effect` and `trigger` independently. Across declarations, the last declaration containing that field wins. Each displaced block points to the final winner. The acceptance cases check both source labels and lines across a parent and primary mod, a repeated field in one declaration, and a clean child appended through `on_actions`. They also cover a parent file masked by the same path in the primary mod.
 

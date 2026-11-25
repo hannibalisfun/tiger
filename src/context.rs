@@ -17,6 +17,8 @@ const MAX_SCOPE_NAME_LIST: usize = 6;
 /// currently being validated.
 #[derive(Clone, Debug)]
 pub struct ScopeContext {
+    #[cfg(feature = "ck3")]
+    pub(crate) optional: crate::ck3::optional_variables::Flow,
     /// `scope_stack` contains all known previous scopes, with `this` at the end. The oldest scope
     /// is at index 0. INVARIANT: it is never empty, because there is always `this`.
     ///
@@ -247,6 +249,8 @@ impl ScopeContext {
     pub fn new<T: Into<Token>>(root: Scopes, token: T) -> Self {
         let token = token.into();
         ScopeContext {
+            #[cfg(feature = "ck3")]
+            optional: Default::default(),
             scope_stack: vec![ScopeEntry::Rootref],
             root: ScopeEntry::Scope(root, Reason::Builtin(token.clone())),
             #[cfg(feature = "hoi4")]
@@ -277,6 +281,8 @@ impl ScopeContext {
     pub fn new_unrooted<T: Into<Token>>(this: Scopes, token: T) -> Self {
         let token = token.into();
         ScopeContext {
+            #[cfg(feature = "ck3")]
+            optional: Default::default(),
             scope_stack: vec![ScopeEntry::Scope(this, Reason::Token(token.clone()))],
             root: ScopeEntry::Scope(Scopes::all(), Reason::Token(token.clone())),
             #[cfg(feature = "hoi4")]
@@ -372,6 +378,10 @@ impl ScopeContext {
         new_sc.prev_levels = 0;
         new_sc.is_unrooted = false;
         new_sc.traceback.push(trace);
+        #[cfg(feature = "ck3")]
+        {
+            new_sc.optional = Default::default();
+        }
         new_sc.wipe_temporaries();
         Some(new_sc)
     }
@@ -742,6 +752,24 @@ impl ScopeContext {
     pub fn open_builder(&mut self) {
         self.scope_stack.push(ScopeEntry::Backref(THIS));
         self.is_builder = true;
+    }
+
+    /// Identify the object at this point in the local traversal. A temporary chain
+    /// such as `liege.var:x` must not borrow the containing character's guard.
+    #[cfg(feature = "ck3")]
+    pub(crate) fn variable_receiver(&self) -> crate::ck3::optional_variables::Receiver {
+        use crate::ck3::optional_variables::Receiver;
+        let mut i = self.scope_stack.len() - 1;
+        while let ScopeEntry::Backref(back) = self.scope_stack[i] {
+            i -= back;
+        }
+        match &self.scope_stack[i] {
+            ScopeEntry::Rootref => Receiver::Root,
+            ScopeEntry::Named(n) => Receiver::Named(*n),
+            _ if self.is_builder && i + 1 == self.scope_stack.len() => Receiver::Unknown,
+            _ if i == self.prev_levels => Receiver::Input,
+            _ => Receiver::Frame(i as isize - self.prev_levels as isize),
+        }
     }
 
     #[cfg(any(feature = "ck3", feature = "vic3", feature = "eu5"))]

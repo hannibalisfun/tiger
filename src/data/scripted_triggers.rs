@@ -157,8 +157,16 @@ impl Trigger {
         tooltipped: Tooltipped,
         negated: bool,
     ) {
+        #[cfg(feature = "ck3")]
+        if key.loc != self.key.loc {
+            data.variables.optional.call(sc, key, self.key.loc);
+        }
         if !self.cached_compat(key, &[], tooltipped, negated, sc, data) {
             let mut our_sc = ScopeContext::new_unrooted(Scopes::all(), &self.key);
+            #[cfg(feature = "ck3")]
+            {
+                our_sc.optional.script = Some(self.key.loc);
+            }
             our_sc.set_strict_scopes(false);
             if self.scope_override.is_some() {
                 our_sc.set_no_warn(true);
@@ -217,10 +225,16 @@ impl Trigger {
         }
         // Every invocation is treated as different even if the args are the same,
         // because we want to point to the correct one when reporting errors.
+        #[cfg(feature = "ck3")]
+        data.variables.optional.call(sc, key, key.loc);
         if !self.cached_compat(key, args, tooltipped, negated, sc, data)
             && let Some(block) = self.block.expand_macro(args, key.loc, &data.parser.pdxfile)
         {
             let mut our_sc = ScopeContext::new_unrooted(Scopes::all(), &self.key);
+            #[cfg(feature = "ck3")]
+            {
+                our_sc.optional.script = Some(key.loc);
+            }
             our_sc.set_strict_scopes(false);
             if self.scope_override.is_some() {
                 our_sc.set_no_warn(true);

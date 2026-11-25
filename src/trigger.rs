@@ -262,6 +262,16 @@ pub fn validate_trigger_internal(
     }
 
     validate_ifelse_sequence(block, "trigger_if", "trigger_else_if", "trigger_else");
+    #[cfg(feature = "ck3")]
+    let before = sc.optional.saved_presence();
+    #[cfg(feature = "ck3")]
+    if matches!(caller.as_str(), "trigger_if" | "trigger_else_if" | "trigger_else") {
+        data.variables.optional.guard(sc, block, "limit");
+    }
+    #[cfg(feature = "ck3")]
+    if ltype != ListType::None {
+        data.variables.optional.guard(sc, block, "filter");
+    }
 
     vd.unknown_fields_any_cmp(|key, cmp, bv| {
         #[cfg(feature = "jomini")]
@@ -350,6 +360,8 @@ pub fn validate_trigger_internal(
         });
     }
 
+    #[cfg(feature = "ck3")]
+    sc.optional.leave_branch(&before);
     side_effects
 }
 
@@ -1013,7 +1025,14 @@ fn match_trigger_bv(
                         // exists = flag:$REASON$ is used in vanilla just to shut up their error.log,
                         // so accept it silently even though it's a no-op.
                     } else {
-                        validate_target_ok_this(token, data, sc, Scopes::all_but_none());
+                        validate_target_inner(
+                            token,
+                            data,
+                            sc,
+                            Scopes::all_but_none(),
+                            None,
+                            PartFlags::ExistenceProbe,
+                        );
 
                         if tooltipped.is_tooltipped()
                             && let Some(firstpart) = token.as_str().strip_suffix(".holder")
@@ -1387,7 +1406,7 @@ pub fn validate_target_ok_this(
     sc: &mut ScopeContext,
     outscopes: Scopes,
 ) -> Scopes {
-    validate_target_inner(token, data, sc, outscopes, None)
+    validate_target_inner(token, data, sc, outscopes, None, PartFlags::empty())
 }
 
 fn validate_target_inner(
@@ -1396,6 +1415,7 @@ fn validate_target_inner(
     sc: &mut ScopeContext,
     outscopes: Scopes,
     #[allow(unused_variables)] alternative_item: Option<Item>,
+    last_flags: PartFlags,
 ) -> Scopes {
     if token.is_number() {
         #[allow(unused_mut)] // only needs mut for hoi4
@@ -1433,7 +1453,7 @@ fn validate_target_inner(
             part_flags |= PartFlags::First;
         }
         if i + 1 == part_vec.len() {
-            part_flags |= PartFlags::Last;
+            part_flags |= PartFlags::Last | last_flags;
         }
         let part = &part_vec[i];
 
@@ -1585,7 +1605,7 @@ pub(crate) fn validate_target_after_item(
         let msg = "target `this` makes no sense here";
         warn(ErrorKey::UseOfThis).msg(msg).loc(token).push();
     }
-    validate_target_inner(token, data, sc, outscopes, alternative_item)
+    validate_target_inner(token, data, sc, outscopes, alternative_item, PartFlags::empty())
 }
 
 /// A part in a token chain
@@ -1757,6 +1777,7 @@ bitflags! {
         const First = 0b_0000_0001;
         const Last = 0b_0000_0010;
         const Question = 0b_0000_0100;
+        const ExistenceProbe = 0b_0000_1000;
     }
 }
 
@@ -1800,7 +1821,7 @@ fn validate_argument_internal(
         ArgumentValue::ScopeOrItem(scope, item) => {
             if !data.resolve_item_token(item, arg) {
                 let stash = sc.stash_builder();
-                validate_target_inner(arg, data, sc, scope, Some(item));
+                validate_target_inner(arg, data, sc, scope, Some(item), PartFlags::empty());
                 sc.unstash_builder(stash);
             }
         }
@@ -1899,6 +1920,12 @@ pub fn validate_argument_scope(
         #[cfg(feature = "jomini")]
         sc.replace_global_variable(arg.as_str(), part);
     } else if func.lowercase_is("var") {
+        #[cfg(feature = "ck3")]
+        if !part_flags.contains(PartFlags::ExistenceProbe)
+            && !part_flags.contains(PartFlags::Last | PartFlags::Question)
+        {
+            data.variables.optional.read(sc, part, arg.as_str());
+        }
         #[cfg(feature = "jomini")]
         sc.replace_variable(arg.as_str(), part);
     } else {

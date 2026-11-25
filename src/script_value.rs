@@ -257,7 +257,13 @@ fn validate_iterator(
         Tooltipped::No,
     );
 
+    #[cfg(feature = "ck3")]
+    let before = sc.optional.saved_presence();
+    #[cfg(feature = "ck3")]
+    data.variables.optional.guard(sc, block, "limit");
     side_effects |= validate_inner(vd, block, data, sc, TriBool::Maybe, check_desc);
+    #[cfg(feature = "ck3")]
+    sc.optional.leave_branch(&before);
     if !side_effects {
         let msg = "this iterator does not change the script value";
         let info = "it should be either removed, or changed to do something useful";
@@ -299,7 +305,13 @@ fn validate_if(
     vd.field_validated_block("limit", |block, data| {
         side_effects |= validate_trigger(block, data, sc, Tooltipped::No);
     });
+    #[cfg(feature = "ck3")]
+    let before = sc.optional.saved_presence();
+    #[cfg(feature = "ck3")]
+    data.variables.optional.guard(sc, block, "limit");
     side_effects |= validate_inner(vd, block, data, sc, TriBool::Maybe, check_desc);
+    #[cfg(feature = "ck3")]
+    sc.optional.leave_branch(&before);
 
     if !side_effects {
         let msg = format!("this `{key}` does not change the script value");
