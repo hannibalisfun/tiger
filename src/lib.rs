@@ -30,6 +30,8 @@ pub use crate::everything::Everything;
 pub use crate::fileset::FileKind;
 pub use crate::game::Game;
 pub use crate::helpers::{TigerHashMap, TigerHashSet, enable_comparison_mode};
+#[cfg(feature = "ck3")]
+pub use crate::impact_batch::ImpactBatch;
 pub use crate::item::Item;
 pub use crate::launcher_settings::get_version_from_launcher;
 #[cfg(any(feature = "vic3", feature = "eu5"))]
@@ -76,6 +78,10 @@ mod fileset;
 mod game;
 mod gui;
 mod helpers;
+#[cfg(feature = "ck3")]
+pub mod impact;
+#[cfg(feature = "ck3")]
+mod impact_batch;
 mod item;
 mod launcher_settings;
 #[cfg(feature = "ck3")]

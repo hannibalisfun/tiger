@@ -385,6 +385,8 @@ pub fn validate_non_dynamic_script_value(bv: &BV, data: &Everything) {
             data.script_values.validate_non_dynamic_call(token, data);
             return;
         }
+        #[cfg(feature = "ck3")]
+        data.record_unresolved_caller(Item::ScriptValue, token);
     }
     let msg = "dynamic script values are not allowed here";
     let info = "only literal numbers or the name of a simple script value";

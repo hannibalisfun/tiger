@@ -301,7 +301,7 @@ dependencies = [
 
 [[package]]
 name = "ck3-tiger"
-version = "1.19.0-pod.3"
+version = "1.19.0-pod.4"
 dependencies = [
  "anyhow",
  "clap",
@@ -2623,6 +2623,7 @@ name = "tiger-lib"
 version = "1.19.0"
 dependencies = [
  "ahash",
+ "aho-corasick",
  "ansiterm",
  "anyhow",
  "as-any",

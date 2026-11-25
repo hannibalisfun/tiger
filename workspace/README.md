@@ -45,6 +45,26 @@ Tiger retains shadow history for scripted effects, scripted triggers, script val
 
 Each run includes `metadata.input_revisions` in load order, with the input path, containing Git repository, full HEAD revision and dirty state. For a nested mod such as `devpod`, dirty state covers tracked changes and non-ignored untracked files under that mod directory. A non-Git game install has a launcher version and null Git fields. A Git-ignored input may have an enclosing revision and unknown dirty state. In lookup mode exit **0** means Tiger indexed an active definition or contribution, **1** means the identifier is absent or fully shadowed, and **2** indicates a runner or Tiger failure.
 
+## Find callers affected by a Git diff
+
+Use `--impact REV` to compare a commit with the current working tree of the primary mod. Omitting REV uses HEAD. The comparison includes staged and unstaged changes and non-ignored untracked files. For a mod nested in a larger repository, the diff is limited to its mod directory.
+
+```powershell
+py -3 workspace/run.py --game $game --mod '../POD-Combat-Integration/devpod' --impact HEAD --json
+```
+
+To inspect a changed parent while validating a submod, supply the usual load order and select the parent's label. Here `parent-0` refers to the first `--parent` argument.
+
+```powershell
+py -3 workspace/run.py --game $game --parent '../POD Reference' --mod '../Camp-Pressure-PoD' --impact HEAD --impact-layer parent-0 --json
+```
+
+The runner parses both sides of the changed script files with Tiger, then collects direct caller sites for all changed symbols during one full validation. It also checks the selected Git input for changes during that run. Normal diagnostics stay in `reports`, with the usual filters and `--fail-on` exit status. Use `--show-parents` to include parent diagnostics. The impact report can still identify callers in parent files with the default filters.
+
+`impact.base` is the resolved commit. Each row in `impact.symbols` includes the changed source occurrences, the current definitions, and direct caller sites with available macro invocation locations. `changed` identifies an edit to an effective definition or additive contribution. `unchanged` identifies an edit confined to a shadowed copy. File additions and deletions account for lower copies at the same path. `removed` means the definition has disappeared. `possible` flags a surviving definition whose old binding is uncertain. `unresolved` means Tiger could not match a changed occurrence to a loaded definition. Look at `unresolved_callers` for surviving references that can no longer resolve.
+
+Coverage includes scripted effects, triggers, values, on-actions, traits, events and supported top-level database definitions such as decisions, buildings and districts. `impact.skipped` identifies changed paths or declarations outside that coverage, including localization, GUI files and malformed script. Caller counts describe direct script references visible to Tiger. Engine callbacks and unexpanded macros can have additional callers.
+
 ## Compare revisions
 
 Pass an unmodified checkout or overlay of the primary mod as `--baseline`. Put the changed version in `--mod`. Both runs use the same game, ordered parents, and deterministic validation. The comparison includes loaded parent reports so a changed definition can surface an error in an unchanged caller. Use `--show-vanilla` when vanilla callers also need checking.
@@ -64,6 +84,8 @@ py -3 -B workspace/tests/first_pass.py --workspace .. --game $game --tiger targe
 py -3 -B workspace/tests/port_passes.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
 py -3 -B workspace/tests/test_runner.py
 py -3 -B workspace/tests/test_lookup.py
+py -3 -B workspace/tests/test_impact.py
+py -3 -B workspace/tests/combat_impact.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
 cargo test --locked -p tiger-lib
 ```
 

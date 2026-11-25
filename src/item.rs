@@ -249,14 +249,17 @@ impl ItemLoader {
         depth: usize,
         parser: &ParserMemory,
     ) -> Option<Block> {
-        // Some loaders have a file path in place of a directory.
-        if (self.recursive() || entry.path().components().count() <= depth)
-            && entry.filename().to_string_lossy().ends_with(self.extension())
-        {
+        if self.accepts_file(entry, depth) {
             PdxFile::read_encoded(entry, self.encoding(), parser)
         } else {
             None
         }
+    }
+
+    pub fn accepts_file(&self, entry: &FileEntry, depth: usize) -> bool {
+        // Some loaders have a file path in place of a directory.
+        (self.recursive() || entry.path().components().count() <= depth)
+            && entry.filename().to_string_lossy().ends_with(self.extension())
     }
 
     pub fn add_block(&self, db: &mut Db, mut block: Block) {

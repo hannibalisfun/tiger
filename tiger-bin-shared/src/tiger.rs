@@ -82,6 +82,14 @@ struct ValidateArgs {
     #[cfg(feature = "ck3")]
     #[clap(long, value_name = "SYMBOL", value_parser = clap::builder::NonEmptyStringValueParser::new())]
     lookup: Option<String>,
+    /// Collect changed-symbol references while performing full validation.
+    #[cfg(feature = "ck3")]
+    #[clap(long, value_name = "FILE", requires = "impact_output", conflicts_with = "lookup")]
+    impact_manifest: Option<PathBuf>,
+    /// Write impact data to a new JSON file, separately from normal diagnostics.
+    #[cfg(feature = "ck3")]
+    #[clap(long, value_name = "FILE", requires = "impact_manifest")]
+    impact_output: Option<PathBuf>,
     /// Consolidate certain repeated errors
     #[clap(long, short)]
     consolidate: bool,
@@ -260,15 +268,15 @@ pub fn run(
                 };
                 #[cfg(feature = "ck3")]
                 {
-                    everything = if let Some(query) = &args.lookup {
-                        Everything::new_with_lookup(
+                    everything = if args.lookup.is_some() || args.impact_manifest.is_some() {
+                        Everything::new_with_lookups(
                             args.config.as_deref(),
                             args.game.as_deref(),
                             args.workshop.as_deref(),
                             args.paradox.as_deref(),
                             &modpath,
                             modfile.replace_paths(),
-                            query,
+                            args.lookup.as_slice(),
                         )
                     } else {
                         load()
@@ -327,6 +335,12 @@ pub fn run(
                 set_show_loaded_mods(true);
             }
 
+            #[cfg(feature = "ck3")]
+            let impact = args
+                .impact_manifest
+                .as_deref()
+                .map(|path| tiger_lib::ImpactBatch::prepare(path, &mut everything))
+                .transpose()?;
             everything.load_all();
             everything.validate_all();
             #[cfg(feature = "ck3")]
@@ -346,6 +360,10 @@ pub fn run(
                 everything.check_unused();
             }
 
+            #[cfg(feature = "ck3")]
+            if let (Some(impact), Some(path)) = (impact, &args.impact_output) {
+                impact.write(path, &everything)?;
+            }
             let any_printed = emit_reports(&mut output, args.json, args.consolidate, true);
 
             if !args.json && !any_printed {

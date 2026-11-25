@@ -575,6 +575,21 @@ pub fn validate_trigger_key_bv(
                     return side_effects;
                 } else {
                     // TODO: warn if trying to use iterator here
+                    #[cfg(feature = "ck3")]
+                    {
+                        data.record_unresolved_caller(Item::ScriptedTrigger, key);
+                        if part_flags.contains(PartFlags::Last)
+                            && matches!(
+                                cmp,
+                                Comparator::LessThan
+                                    | Comparator::GreaterThan
+                                    | Comparator::AtMost
+                                    | Comparator::AtLeast
+                            )
+                        {
+                            data.record_unresolved_caller(Item::ScriptValue, part);
+                        }
+                    }
                     let msg = format!("unknown token `{part}`");
                     err(ErrorKey::UnknownField).msg(msg).loc(part).push();
                     sc.close();
@@ -821,7 +836,7 @@ fn match_trigger_bv(
             if let Some(token) = bv.expect_value()
                 && !data.resolve_item_token(*i, token)
             {
-                validate_target(token, data, sc, *s);
+                validate_target_after_item(token, data, sc, *s, Some(*i));
             }
         }
         Trigger::Choice(choices) => {
@@ -1372,6 +1387,16 @@ pub fn validate_target_ok_this(
     sc: &mut ScopeContext,
     outscopes: Scopes,
 ) -> Scopes {
+    validate_target_inner(token, data, sc, outscopes, None)
+}
+
+fn validate_target_inner(
+    token: &Token,
+    data: &Everything,
+    sc: &mut ScopeContext,
+    outscopes: Scopes,
+    #[allow(unused_variables)] alternative_item: Option<Item>,
+) -> Scopes {
     if token.is_number() {
         #[allow(unused_mut)] // only needs mut for hoi4
         let mut number_scope = Scopes::Value;
@@ -1496,6 +1521,20 @@ pub fn validate_target_ok_this(
                 } else {
                     // See if the user forgot a prefix like `faith:` or `culture:`
                     let mut opt_info = None;
+                    #[cfg(feature = "ck3")]
+                    {
+                        if let Some(item) = alternative_item
+                            && part_flags.contains(PartFlags::First | PartFlags::Last)
+                        {
+                            data.record_unresolved_caller(item, part);
+                        }
+                        if part_flags.contains(PartFlags::Last)
+                            && outscopes.contains(Scopes::Value)
+                            && (Scopes::Value | Scopes::Bool).contains(outscopes)
+                        {
+                            data.record_unresolved_caller(Item::ScriptValue, part);
+                        }
+                    }
                     if part_flags.contains(PartFlags::First | PartFlags::Last)
                         && let Some(prefix) = needs_prefix(part.as_str(), data, outscopes)
                     {
@@ -1532,11 +1571,21 @@ pub fn validate_target(
     sc: &mut ScopeContext,
     outscopes: Scopes,
 ) -> Scopes {
+    validate_target_after_item(token, data, sc, outscopes, None)
+}
+
+pub(crate) fn validate_target_after_item(
+    token: &Token,
+    data: &Everything,
+    sc: &mut ScopeContext,
+    outscopes: Scopes,
+    alternative_item: Option<Item>,
+) -> Scopes {
     if token.is("this") {
         let msg = "target `this` makes no sense here";
         warn(ErrorKey::UseOfThis).msg(msg).loc(token).push();
     }
-    validate_target_ok_this(token, data, sc, outscopes)
+    validate_target_inner(token, data, sc, outscopes, alternative_item)
 }
 
 /// A part in a token chain
@@ -1751,7 +1800,7 @@ fn validate_argument_internal(
         ArgumentValue::ScopeOrItem(scope, item) => {
             if !data.resolve_item_token(item, arg) {
                 let stash = sc.stash_builder();
-                validate_target_ok_this(arg, data, sc, scope);
+                validate_target_inner(arg, data, sc, scope, Some(item));
                 sc.unstash_builder(stash);
             }
         }
@@ -1763,7 +1812,7 @@ fn validate_argument_internal(
                 data.verify_exists(Item::TraitTrack, &track);
             } else if !data.resolve_item_token(Item::Trait, arg) {
                 let stash = sc.stash_builder();
-                validate_target(arg, data, sc, Scopes::Trait);
+                validate_target_after_item(arg, data, sc, Scopes::Trait, Some(Item::Trait));
                 sc.unstash_builder(stash);
             }
         }

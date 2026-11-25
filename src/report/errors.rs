@@ -46,6 +46,23 @@ static ERRORS: LazyLock<Mutex<Errors>> = LazyLock::new(|| Mutex::new(Errors::def
 thread_local!(static INSPECTING_EXCLUDED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) });
 
 #[cfg(feature = "ck3")]
+thread_local!(static INSPECTION_ERRORS: std::cell::RefCell<Option<Vec<String>>> = const { std::cell::RefCell::new(None) });
+
+/// Collect parser errors from a scratch file without publishing reports or ignore rules.
+#[cfg(feature = "ck3")]
+pub(crate) fn inspect_historical<T>(inspect: impl FnOnce() -> T) -> (T, Vec<String>) {
+    struct Restore(Option<Vec<String>>);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            INSPECTION_ERRORS.replace(self.0.take());
+        }
+    }
+    let _restore = Restore(INSPECTION_ERRORS.replace(Some(Vec::new())));
+    let value = inspect_excluded(inspect);
+    (value, INSPECTION_ERRORS.take().unwrap_or_default())
+}
+
+#[cfg(feature = "ck3")]
 pub(crate) fn inspect_excluded<T>(inspect: impl FnOnce() -> T) -> T {
     struct Restore(bool);
     impl Drop for Restore {
@@ -335,6 +352,17 @@ pub fn add_loaded_dlc_root(label: String) {
 pub fn log((report, pointers): LogReport) {
     #[cfg(feature = "ck3")]
     if INSPECTING_EXCLUDED.get() {
+        if report.severity >= crate::report::Severity::Error
+            || matches!(report.key, ErrorKey::ParseError | ErrorKey::BraceError)
+        {
+            INSPECTION_ERRORS.with_borrow_mut(|errors| {
+                if let Some(errors) = errors
+                    && errors.is_empty()
+                {
+                    errors.push(report.msg);
+                }
+            });
+        }
         return;
     }
     let pointers = pointed_msg_expansion(pointers);

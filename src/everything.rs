@@ -455,6 +455,28 @@ impl Everything {
         replace_paths: Vec<PathBuf>,
         query: &str,
     ) -> Result<Self> {
+        Self::new_with_lookups(
+            config_filepath,
+            vanilla_dir,
+            workshop_dir,
+            paradox_dir,
+            mod_root,
+            replace_paths,
+            &[query.to_owned()],
+        )
+    }
+
+    /// Collect definition provenance and resolved callers for a batch in one validation.
+    #[cfg(feature = "ck3")]
+    pub fn new_with_lookups(
+        config_filepath: Option<&Path>,
+        vanilla_dir: Option<&Path>,
+        workshop_dir: Option<&Path>,
+        paradox_dir: Option<&Path>,
+        mod_root: &Path,
+        replace_paths: Vec<PathBuf>,
+        queries: &[String],
+    ) -> Result<Self> {
         Self::new_inner(
             config_filepath,
             vanilla_dir,
@@ -462,7 +484,7 @@ impl Everything {
             paradox_dir,
             mod_root,
             replace_paths,
-            Some(query),
+            Some(queries),
         )
     }
 
@@ -473,11 +495,11 @@ impl Everything {
         paradox_dir: Option<&Path>,
         mod_root: &Path,
         replace_paths: Vec<PathBuf>,
-        #[allow(unused_variables)] query: Option<&str>,
+        #[allow(unused_variables)] queries: Option<&[String]>,
     ) -> Result<Self> {
         let mut fileset = Fileset::new(vanilla_dir, mod_root.to_path_buf(), replace_paths);
         #[cfg(feature = "ck3")]
-        if query.is_some() {
+        if queries.is_some() {
             fileset.lookup_exclusions = Some(Vec::new());
         }
 
@@ -571,7 +593,7 @@ impl Everything {
             parser: ParserMemory::default(),
             fileset,
             #[cfg(feature = "ck3")]
-            lookup_callers: query.map(crate::lookup_callers::CallerLookup::new),
+            lookup_callers: None,
             dds: DdsFiles::default(),
             config,
             #[cfg(any(feature = "ck3", feature = "vic3"))]
@@ -651,8 +673,8 @@ impl Everything {
             variable_list_scopes,
         };
         #[cfg(feature = "ck3")]
-        if let Some(query) = query {
-            data.enable_definition_history(query);
+        if let Some(queries) = queries {
+            data.set_lookup_queries(queries);
         }
         Ok(data)
     }
@@ -1287,6 +1309,10 @@ impl Everything {
             }
             _ => {
                 if !self.item_exists(itype, key) {
+                    #[cfg(feature = "ck3")]
+                    if token.is(key) {
+                        self.record_unresolved_caller(itype, token);
+                    }
                     let path = itype.path();
                     let msg = if path.is_empty() {
                         format!("unknown {itype} {key}")

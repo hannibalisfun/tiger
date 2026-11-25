@@ -12,6 +12,9 @@ import sys
 import tempfile
 import time
 
+import impact
+import impact_git
+
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_BINARY = ROOT / "target/release" / ("ck3-tiger.exe" if os.name == "nt" else "ck3-tiger")
@@ -154,7 +157,7 @@ def json_rows(stream):
 
 
 @contextmanager
-def tiger_command(tiger, game, mod, parents, *, stable, show_parents, show_vanilla, symbol=None):
+def tiger_command(tiger, game, mod, parents, *, stable, show_parents, show_vanilla, symbol=None, impact_files=None):
     with tempfile.TemporaryDirectory(prefix="ck3-tiger-") as folder:
         work = Path(folder)
         conf = configuration(work, parents, show_parents, show_vanilla)
@@ -163,6 +166,9 @@ def tiger_command(tiger, game, mod, parents, *, stable, show_parents, show_vanil
             command.append("--deterministic")
         if symbol is not None:
             command.extend(["--lookup", symbol])
+        if impact_files:
+            manifest, output = impact_files
+            command.extend(["--impact-manifest", manifest, "--impact-output", output])
         command.append(descriptor(mod, work, "target"))
         yield command
 
@@ -189,6 +195,23 @@ def lookup(tiger, game, mod, parents, symbol, **settings):
             or not isinstance(found.get("callers"), list)):
         raise ValueError("Malformed Tiger lookup result")
     return found
+
+
+def scan_impact(binary, game, mod, parents, revision, layer, settings):
+    roots = {f"parent-{i}": root for i, root in enumerate(parents)}
+    roots["MOD"] = mod
+    if layer not in roots:
+        raise ValueError(f"Unknown impact layer {layer!r}. Loaded layers: {', '.join(roots)}")
+    with tempfile.TemporaryDirectory(prefix="ck3-tiger-impact-") as folder:
+        work = Path(folder)
+        inventory = impact_git.collect(roots[layer], revision, work)
+        manifest, output = work / "manifest.json", work / "impact.json"
+        manifest.write_text(json.dumps({"layer": layer, "files": inventory["files"]}), encoding="utf-8")
+        reports = list(scan(binary, game, mod, parents, impact_files=(manifest, output), **settings))
+        native = json.loads(output.read_text(encoding="utf-8"))
+        result = impact.report(layer, inventory, native)
+        impact_git.verify(roots[layer], inventory)
+    return reports, result
 
 
 def print_lookup(found):
@@ -307,6 +330,12 @@ def validate(args):
         found = lookup(binary, game, mod, parents, args.lookup, **settings)
         metadata["seconds"] = round(time.monotonic() - started, 3)
         return {"metadata": metadata, "lookup": found}
+    if args.impact is not None:
+        reports, changed = scan_impact(binary, game, mod, parents, args.impact,
+                                       args.impact_layer or "MOD", settings)
+        metadata.update(cache="disabled", candidate_reports=len(reports), removed=0,
+                        seconds=round(time.monotonic() - started, 3))
+        return {"metadata": metadata, "impact": changed, "reports": reports}
     previous, cache_status, snapshot = (baseline_counts(args, binary, game, baseline, parents, settings, metadata)
                                         if baseline else (Counter(), "disabled", None))
     reports = []
@@ -334,8 +363,12 @@ def main():
     parser.add_argument("--mod", required=True, help="Primary mod directory or bare drop-in tree")
     parser.add_argument("--parent", action="append", default=[], help="Loaded parent directory, lowest priority first")
     parser.add_argument("--tiger", type=Path, default=DEFAULT_BINARY)
-    parser.add_argument("--lookup", metavar="SYMBOL", help="Show loaded definitions and known callers of an identifier")
-    parser.add_argument("--baseline", help="Unmodified primary tree for comparison, including affected parent reports")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--lookup", metavar="SYMBOL", help="Show loaded definitions and known callers of an identifier")
+    mode.add_argument("--impact", nargs="?", const="HEAD", metavar="REV",
+                      help="Report callers of definitions changed since REV (default HEAD) and run full validation")
+    parser.add_argument("--impact-layer", metavar="LABEL", help="Git input for --impact, MOD (default) or parent-N")
+    mode.add_argument("--baseline", help="Unmodified primary tree for comparison, including affected parent reports")
     parser.add_argument("--cache-dir", type=Path, help="Reuse a matching baseline from this directory")
     parser.add_argument("--cache-check", choices=("metadata", "content"), default="metadata",
                         help="Also hash all input bytes in content mode (for timestamp-preserving rewrites)")
@@ -348,7 +381,9 @@ def main():
     args = parser.parse_args()
     if (args.cache_dir and not args.baseline) or (args.refresh_baseline and not args.cache_dir):
         parser.error("--cache-dir needs --baseline; --refresh-baseline needs --cache-dir")
-    if args.lookup is not None and (not args.lookup.strip() or args.baseline):
+    if args.impact_layer is not None and args.impact is None:
+        parser.error("--impact-layer needs --impact")
+    if args.lookup is not None and not args.lookup.strip():
         parser.error("--lookup needs a nonempty symbol and a single load order")
     try:
         result = validate(args)
@@ -364,6 +399,8 @@ def main():
             print(f'{entry["label"]} {entry["path"]}  {entry["revision"] or "revision unavailable"} ({state})')
         if args.lookup is not None:
             print_lookup(result["lookup"])
+        if "impact" in result:
+            impact.print_report(result["impact"])
         for row in result.get("reports", []):
             for index, loc in enumerate(row["locations"] or [{}]):
                 where = f"{loc.get('from', '?')} {loc.get('path', '?')}:{loc.get('linenr') or 0}"

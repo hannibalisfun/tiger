@@ -24,7 +24,7 @@ rust-version = "1.88"
 
 [features]
 default = ["ck3"]
-ck3 = ["jomini", "tiger-tables/ck3"]
+ck3 = ["jomini", "tiger-tables/ck3", "dep:aho-corasick"]
 vic3 = ["jomini", "tiger-tables/vic3"]
 imperator = ["jomini", "tiger-tables/imperator"]
 eu5 = ["jomini", "tiger-tables/eu5"]
@@ -44,6 +44,7 @@ divan = { version = "0.1.21", optional = true }
 toml = { version = "0.9.5", optional = true }
 
 # Standard deps
+aho-corasick = { version = "1", optional = true }
 ansiterm = "0.12.2"
 anyhow = "1"
 as-any = "0.3.0"

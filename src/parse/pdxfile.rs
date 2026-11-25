@@ -32,6 +32,103 @@ lalrpop_mod! {
 }
 static FILE_PARSER: LazyLock<parser::FileParser> = LazyLock::new(parser::FileParser::new);
 
+/// Parse a historical blob without writing to the active source cache or parser memory.
+#[cfg(feature = "ck3")]
+pub(crate) fn parse_historical(
+    path: &std::path::Path,
+    text: String,
+) -> Result<(Block, Vec<Vec<String>>), String> {
+    let entry = FileEntry::new(path.into(), FileStage::NoStage, FileKind::Internal, path.into());
+    let mut loc = Loc::from(&entry);
+    loc.line = 1;
+    loc.column = 1;
+    let inputs = [Token::from_static_str(text.leak(), loc)];
+    let memory = ParserMemory::default();
+    let mut combined = CombinedMemory::new(&memory.pdxfile);
+    let block = FILE_PARSER
+        .parse(&inputs, &mut combined, Lexer::new(&inputs))
+        .map_err(|error| error.to_string())?;
+    let directives =
+        if inputs[0].as_str().contains('@') { historical_directives(&inputs) } else { Vec::new() };
+    Ok((block, directives))
+}
+
+// The parser consumes reader declarations, leaving their expanded uses in the
+// tree. Retain the statements too, so an unused or unmapped change is visible.
+#[cfg(feature = "ck3")]
+fn historical_directives(inputs: &[Token]) -> Vec<Vec<String>> {
+    use lexer::Directive;
+    let tokens: Vec<_> = Lexer::new(inputs).flatten().map(|(_, lex, _)| lex).collect();
+    let mut statements = Vec::new();
+    for (i, token) in tokens.iter().enumerate() {
+        let name_end = match token {
+            Lexeme::VariableReference(_)
+                if matches!(tokens.get(i + 1), Some(Lexeme::Comparator(..))) =>
+            {
+                i + 1
+            }
+            Lexeme::Directive(_, _) => (i + 2).min(tokens.len()),
+            _ => continue,
+        };
+        let mut end = name_end;
+        if matches!(tokens.get(end), Some(Lexeme::Comparator(..))) {
+            end += 1;
+            match tokens.get(end) {
+                Some(Lexeme::BlockStart(_) | Lexeme::CalcStart(_)) => {
+                    let mut depth = 0;
+                    while let Some(part) = tokens.get(end) {
+                        end += 1;
+                        match part {
+                            Lexeme::BlockStart(_) | Lexeme::CalcStart(_) => depth += 1,
+                            Lexeme::BlockEnd(_) | Lexeme::CalcEnd(_) => depth -= 1,
+                            _ => (),
+                        }
+                        if depth == 0 {
+                            break;
+                        }
+                    }
+                }
+                Some(Lexeme::Directive(Directive::LoadVariable, _)) => {
+                    end = (end + 2).min(tokens.len())
+                }
+                Some(_) => end += 1,
+                None => (),
+            }
+        }
+        statements.push(tokens[i..end].iter().map(ToString::to_string).collect());
+    }
+    statements
+}
+
+/// Macro bodies are expanded from source at the call site. Preserve token kinds and
+/// adjacency to a macro parameter, which determines whether it is spliced into a word.
+#[cfg(feature = "ck3")]
+pub(crate) fn macro_syntax(parts: &[MacroComponent]) -> Vec<(bool, String)> {
+    let mut body = String::new();
+    for part in parts {
+        if part.kind == MacroComponentKind::Macro {
+            body.push('$');
+            body.push_str(part.token.as_str());
+            body.push('$');
+        } else {
+            body.push_str(part.token.as_str());
+        }
+    }
+    let input = [Token::new(&body, parts[0].token.loc)];
+    let mut previous = (0, false, false);
+    Lexer::new(&input)
+        .flatten()
+        .map(|(start, lex, end)| {
+            let parameter = matches!(lex, Lexeme::MacroParam(_));
+            let word =
+                parameter || matches!(lex, Lexeme::General(_) | Lexeme::VariableReference(_));
+            let joined = start == previous.0 && word && previous.1 && (parameter || previous.2);
+            previous = (end, word, parameter);
+            (joined, lex.to_string())
+        })
+        .collect()
+}
+
 /// Re-parse a macro (which is a scripted effect, trigger, or modifier that uses $ parameters)
 /// after argument substitution. A full re-parse is needed because the game engine allows tricks
 /// such as passing `#` as a macro argument in order to comment out the rest of a line.

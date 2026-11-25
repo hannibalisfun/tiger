@@ -21,7 +21,7 @@ use crate::tooltipped::Tooltipped;
 use crate::trigger::scope_trigger;
 #[cfg(any(feature = "ck3", feature = "imperator"))]
 use crate::trigger::validate_target_ok_this;
-use crate::trigger::{validate_target, validate_trigger};
+use crate::trigger::{validate_target, validate_target_after_item, validate_trigger};
 #[cfg(any(feature = "ck3", feature = "vic3"))]
 use crate::validate::validate_compare_duration;
 #[cfg(any(feature = "ck3", feature = "imperator", feature = "hoi4"))]
@@ -297,7 +297,7 @@ pub fn validate_effect_field(
                 if let Some(token) = bv.expect_value()
                     && !data.resolve_item_token(itype, token)
                 {
-                    validate_target(token, data, sc, outscopes);
+                    validate_target_after_item(token, data, sc, outscopes, Some(itype));
                 }
             }
             #[cfg(feature = "ck3")]
@@ -514,6 +514,9 @@ pub fn validate_effect_field(
         if let Some(block) = bv.expect_block() {
             has_tooltip |= validate_effect(block, data, sc, tooltipped);
         }
+    } else {
+        #[cfg(feature = "ck3")]
+        data.record_unresolved_caller(Item::ScriptedEffect, key);
     }
     sc.close();
     has_tooltip && tooltipped.is_tooltipped()

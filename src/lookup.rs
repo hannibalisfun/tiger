@@ -2,8 +2,10 @@
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
+use aho_corasick::AhoCorasick;
 use serde_json::{Value, json};
 use strum::IntoEnumIterator;
 
@@ -17,31 +19,98 @@ use crate::data::{
 use crate::db::Db;
 use crate::fileset::{FileEntry, FileHandler};
 use crate::item::ItemLoader;
+use crate::lookup_callers::CallerResults;
+use crate::pdxfile::{PdxEncoding, PdxFile};
 use crate::{Everything, Game, Item, Loc, Token};
 
 #[derive(Clone, Debug)]
 struct Definition {
     kind: Item,
+    name: &'static str,
     loc: Loc,
     parameters: Vec<&'static str>,
     contribution: bool,
 }
 
+/// Each distinct query has one result slot. Event aliases can share a native
+/// identity while continuing to match unrelated item kinds by exact spelling.
+#[derive(Debug)]
+pub(crate) struct LookupQueries {
+    exact: HashMap<String, usize>,
+    event_aliases: HashMap<String, HashMap<u16, Vec<usize>>>,
+    literals: Option<AhoCorasick>,
+    namespaces: Option<AhoCorasick>,
+    all_ascii: bool,
+}
+
+impl LookupQueries {
+    pub(crate) fn new(names: &[String]) -> Self {
+        let mut exact = HashMap::new();
+        let mut event_aliases = HashMap::<String, HashMap<u16, Vec<usize>>>::new();
+        for name in names {
+            let index = exact.len();
+            if let std::collections::hash_map::Entry::Vacant(slot) = exact.entry(name.clone()) {
+                slot.insert(index);
+                if let Some((namespace, number)) = event_id(name) {
+                    event_aliases
+                        .entry(namespace.to_owned())
+                        .or_default()
+                        .entry(number)
+                        .or_default()
+                        .push(index);
+                }
+            }
+        }
+        // If an exceptionally large pattern set exceeds the automaton's size limit,
+        // the native loader still sees all potentially relevant files.
+        let literals = AhoCorasick::new(exact.keys()).ok();
+        let namespaces = AhoCorasick::new(event_aliases.keys()).ok();
+        let all_ascii = names.iter().all(|s| s.is_ascii());
+        Self { exact, event_aliases, literals, namespaces, all_ascii }
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.exact.len()
+    }
+
+    pub(crate) fn indices(&self, kind: Item, name: &str) -> &[usize] {
+        if kind == Item::Event
+            && let Some((namespace, id)) = event_id(name)
+        {
+            return self
+                .event_aliases
+                .get(namespace)
+                .and_then(|events| events.get(&id))
+                .map_or(&[], Vec::as_slice);
+        }
+        self.exact.get(name).map_or(&[], std::slice::from_ref)
+    }
+
+    fn could_define(&self, bytes: &[u8], event_file: bool) -> bool {
+        // Reader directives, calculations and Windows-1252 names can differ from their literal spelling.
+        bytes.contains(&b'@')
+            || (!self.all_ascii && !bytes.is_ascii())
+            || self.literals.as_ref().is_none_or(|m| m.is_match(bytes))
+            || (event_file && self.namespaces.as_ref().is_none_or(|m| m.is_match(bytes)))
+    }
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct DefinitionHistory {
-    query: String,
+    queries: Arc<LookupQueries>,
     entries: Vec<Definition>,
 }
 
 impl DefinitionHistory {
-    fn new(query: &str) -> Self {
-        Self { query: query.to_owned(), entries: Vec::new() }
+    fn new(queries: &Arc<LookupQueries>) -> Self {
+        Self { queries: Arc::clone(queries), entries: Vec::new() }
     }
 
     fn push(&mut self, kind: Item, key: &Token, block: Option<&Block>, contribution: bool) {
-        if matches_symbol(kind, &self.query, key.as_str()) {
+        if !self.queries.indices(kind, key.as_str()).is_empty() {
             self.entries.push(Definition {
                 kind,
+                name: key.as_str(),
                 loc: key.loc,
                 parameters: block.map(Block::macro_parms).unwrap_or_default(),
                 contribution,
@@ -52,12 +121,6 @@ impl DefinitionHistory {
     pub(crate) fn contribution(&mut self, kind: Item, key: &Token) {
         self.push(kind, key, None, true);
     }
-}
-
-pub(crate) fn matches_symbol(kind: Item, query: &str, key: &str) -> bool {
-    key == query
-        || (kind == Item::Event
-            && event_id(query).is_some_and(|wanted| event_id(key) == Some(wanted)))
 }
 
 pub(crate) fn record(
@@ -81,7 +144,24 @@ pub(crate) fn location(data: &Everything, loc: Loc) -> Value {
 }
 
 impl Everything {
-    pub(crate) fn enable_definition_history(&mut self, query: &str) {
+    /// Identify a higher layer that masks this path even if its lower copy is absent.
+    pub fn lookup_file_mask(&self, from: &str, path: &Path) -> Option<Value> {
+        self.fileset
+            .lookup_file_mask(from, path)
+            .map(|(reason, from)| json!({ "reason": reason, "from": from }))
+    }
+
+    /// The current lower-layer copy that can surface when an exact-path overlay is removed.
+    pub fn lookup_lower_file(&self, from: &str, path: &Path) -> Option<(String, PathBuf)> {
+        self.fileset.lookup_lower_file(from, path).map(|entry| {
+            (self.fileset.source_label(entry.kind()).to_owned(), entry.fullpath().to_owned())
+        })
+    }
+
+    /// Select symbols after constructing the lookup fileset and before loading script.
+    pub fn set_lookup_queries(&mut self, queries: &[String]) {
+        let queries = Arc::new(LookupQueries::new(queries));
+        self.lookup_callers = Some(crate::lookup_callers::CallerLookup::new(Arc::clone(&queries)));
         for slot in [
             &mut self.database.lookup,
             &mut self.effects.lookup,
@@ -91,26 +171,43 @@ impl Everything {
             &mut self.events.lookup,
             &mut self.traits.lookup,
         ] {
-            *slot = Some(DefinitionHistory::new(query));
+            *slot = Some(DefinitionHistory::new(&queries));
         }
     }
 
     /// Query the symbol supplied to `new_with_lookup` after loading and validation.
     pub fn lookup_result(&self, query: &str) -> Value {
+        self.lookup_results(&[query.to_owned()])[0].take()
+    }
+
+    /// Return one lookup object per requested spelling, preserving order and duplicates.
+    pub fn lookup_results(&self, requested: &[String]) -> Value {
+        if requested.is_empty() {
+            return json!([]);
+        }
+        let queries = self
+            .lookup_callers
+            .as_ref()
+            .map(|lookup| Arc::clone(&lookup.queries))
+            .unwrap_or_else(|| Arc::new(LookupQueries::new(requested)));
         let mut winners = HashSet::new();
         for kind in Item::iter() {
             if kind == Item::Character {
-                winners.extend(self.characters.primary_key(query).map(|key| (kind, key.loc)));
+                for name in queries.exact.keys() {
+                    if let Some(key) = self.characters.primary_key(name) {
+                        winners.insert((kind, key.loc, key.as_str()));
+                    }
+                }
             } else {
                 winners.extend(
                     self.iter_keys(kind)
-                        .filter(|key| matches_symbol(kind, query, key.as_str()))
-                        .map(|key| (kind, key.loc)),
+                        .filter(|key| !queries.indices(kind, key.as_str()).is_empty())
+                        .map(|key| (kind, key.loc, key.as_str())),
                 );
             }
         }
         let mut described = HashSet::new();
-        let mut rows = BTreeMap::new();
+        let mut rows = vec![BTreeMap::new(); queries.len()];
         let mut add = |entry: &Definition, status: &str, reason: Option<&str>| {
             let mut row = location(self, entry.loc);
             row["kind"] = json!(<&'static str>::from(entry.kind));
@@ -124,16 +221,16 @@ impl Everything {
             {
                 row["visibility"] = json!("file");
             }
-            rows.insert(
-                (
-                    entry.kind,
-                    entry.loc.pathname(),
-                    entry.loc.kind,
-                    entry.loc.line,
-                    entry.loc.column,
-                ),
-                row,
+            let order = (
+                entry.kind,
+                entry.loc.pathname(),
+                entry.loc.kind,
+                entry.loc.line,
+                entry.loc.column,
             );
+            for &index in queries.indices(entry.kind, entry.name) {
+                rows[index].insert(order, row.clone());
+            }
         };
         for history in [
             &self.database.lookup,
@@ -147,11 +244,10 @@ impl Everything {
         .into_iter()
         .flatten()
         {
-            assert_eq!(history.query, query, "lookup query differs from the configured symbol");
             for entry in &history.entries {
-                described.insert((entry.kind, entry.loc));
-                let active = winners.contains(&(entry.kind, entry.loc))
-                    || self.effective_file_local(entry, query);
+                let definition = (entry.kind, entry.loc, entry.name);
+                described.insert(definition);
+                let active = winners.contains(&definition) || self.effective_file_local(entry);
                 if entry.contribution {
                     add(entry, "contribution", None);
                 } else if active {
@@ -163,9 +259,9 @@ impl Everything {
         }
         // Other specialized registries expose their retained keys, even where the loader
         // doesn't keep source history for the displaced entries.
-        for &(kind, loc) in winners.difference(&described) {
+        for &(kind, loc, name) in winners.difference(&described) {
             add(
-                &Definition { kind, loc, parameters: Vec::new(), contribution: false },
+                &Definition { kind, name, loc, parameters: Vec::new(), contribution: false },
                 "effective",
                 None,
             );
@@ -179,28 +275,48 @@ impl Everything {
                     }
                 }
                 for (file, reason) in excluded {
-                    for entry in self.excluded_definitions(query, file, &loaders) {
+                    for entry in self.excluded_definitions(&queries, file, &loaders) {
                         add(&entry, "shadowed", Some(reason));
                     }
                 }
             });
         }
-        let callers =
-            self.lookup_callers.as_ref().map(|lookup| lookup.results(self)).unwrap_or_default();
-        json!({
-            "symbol": query,
-            "definitions": rows.into_values().collect::<Vec<_>>(),
+        let callers = self
+            .lookup_callers
+            .as_ref()
+            .map(|lookup| lookup.results(self))
+            .unwrap_or_else(|| vec![CallerResults::default(); queries.len()]);
+        let include_unresolved =
+            self.lookup_callers.as_ref().is_some_and(|lookup| lookup.include_unresolved);
+        let mut found: Vec<Value> = rows.into_iter().zip(callers).map(|(definitions, callers)| {
+            let mut result = json!({
+            "definitions": definitions.into_values().collect::<Vec<_>>(),
             "definition_coverage": "Includes displaced definitions from database item loaders, scripted effects, triggers and values, events, traits and on-actions. Other registries supply their retained keys.",
-            "callers": callers,
+            "callers": callers.resolved,
             "caller_coverage": "Resolved references in validated script. Dynamic identifiers and unexpanded macros can have additional callers.",
-        })
+            });
+            if include_unresolved {
+                result["unresolved_callers"] = Value::Array(callers.unresolved);
+            }
+            result
+        }).collect();
+        for (name, &index) in &queries.exact {
+            found[index]["symbol"] = json!(name);
+        }
+        if requested.len() == found.len()
+            && requested.iter().enumerate().all(|(i, name)| queries.exact.get(name) == Some(&i))
+        {
+            Value::Array(found)
+        } else {
+            Value::Array(requested.iter().map(|name| found[queries.exact[name]].clone()).collect())
+        }
     }
 
-    fn effective_file_local(&self, entry: &Definition, query: &str) -> bool {
+    fn effective_file_local(&self, entry: &Definition) -> bool {
         if !entry.loc.pathname().starts_with("events") {
             return false;
         }
-        let token = Token::new(query, entry.loc);
+        let token = Token::new(entry.name, entry.loc);
         match entry.kind {
             Item::ScriptedEffect => self.get_effect(&token).is_some_and(|v| v.key.loc == entry.loc),
             Item::ScriptedTrigger => {
@@ -212,7 +328,7 @@ impl Everything {
 
     fn excluded_definitions(
         &self,
-        query: &str,
+        queries: &Arc<LookupQueries>,
         file: &FileEntry,
         loaders: &HashMap<&Path, Vec<&ItemLoader>>,
     ) -> Vec<Definition> {
@@ -235,7 +351,9 @@ impl Everything {
             .filter_map(|dir| loaders.get(dir))
             .flatten()
             .copied()
-            .filter(|loader| file.filename().to_string_lossy().ends_with(loader.extension()))
+            .filter(|loader| {
+                loader.accepts_file(file, Path::new(loader.itype().path()).components().count() + 1)
+            })
             .collect();
         if special_kind.is_none() && matching.is_empty() {
             return Vec::new();
@@ -244,58 +362,83 @@ impl Everything {
         // when its text or whole-file key can contain this exact symbol.
         let whole_file_match = matching.iter().any(|l| {
             l.whole_file()
-                && file.filename().to_string_lossy().strip_suffix(l.extension()) == Some(query)
+                && file
+                    .filename()
+                    .to_string_lossy()
+                    .strip_suffix(l.extension())
+                    .is_some_and(|name| queries.exact.contains_key(name))
         });
-        // An event file may spell the same numeric ID with different leading zeroes.
-        let needle = if special_kind == Some(Item::Event) {
-            event_id(query).map_or(query, |(namespace, _)| namespace)
-        } else {
-            query
-        };
-        let could_define = |bytes: Vec<u8>| {
-            // Reader directives and calculations can build keys absent from the literal text.
-            // Detect-encoding loaders may also accept Windows-1252 names.
-            bytes.contains(&b'@')
-                || (!query.is_ascii() && !bytes.is_ascii())
-                || String::from_utf8_lossy(&bytes).contains(needle)
-        };
-        if !whole_file_match && !fs::read(file.fullpath()).is_ok_and(could_define) {
+        if !whole_file_match
+            && !fs::read(file.fullpath())
+                .is_ok_and(|bytes| queries.could_define(&bytes, special_kind == Some(Item::Event)))
+        {
             return Vec::new();
         }
-        let mut history = DefinitionHistory::new(query);
-        // Use the native handlers in isolation. They pick the actual key, including
-        // file-local event scripts, scalar script values and reserved-name exclusions.
-        macro_rules! inspect_handler {
-            ($handler:ty) => {{
-                let mut handler = <$handler>::default();
-                handler.lookup = Some(history);
-                if let Some(block) = handler.load_file(file, &self.parser) {
-                    handler.handle_file(file, block);
-                }
-                history = handler.lookup.unwrap();
-            }};
-        }
-        match special_kind {
-            Some(Item::Event) => inspect_handler!(Events),
-            Some(Item::OnAction) => inspect_handler!(OnActions),
-            Some(Item::Trait) => inspect_handler!(Traits),
-            Some(Item::ScriptValue) => inspect_handler!(ScriptValues),
-            Some(Item::ScriptedEffect) => inspect_handler!(Effects),
-            Some(Item::ScriptedTrigger) => inspect_handler!(Triggers),
-            _ => (),
-        }
-        if !matching.is_empty() {
+        let mut db = (!matching.is_empty()).then(|| {
             let mut db = Db::default();
-            db.lookup = Some(history);
-            for loader in matching {
-                let depth = Path::new(loader.itype().path()).components().count() + 1;
-                if let Some(block) = loader.read_file(file, depth, &self.parser) {
-                    loader.add_block(&mut db, block);
-                }
-            }
-            db.add_subitems();
-            history = db.lookup.unwrap();
+            db.lookup = Some(DefinitionHistory::new(queries));
+            db
+        });
+        let mut by_encoding = HashMap::<_, Vec<_>>::new();
+        if special_kind.is_some() {
+            by_encoding.entry(PdxEncoding::Utf8Bom).or_default();
         }
-        history.entries
+        for loader in matching {
+            by_encoding.entry(loader.encoding()).or_default().push(loader);
+        }
+        let mut entries = Vec::new();
+        for (encoding, loaders) in by_encoding {
+            let Some(block) = PdxFile::read_encoded(file, encoding, &self.parser) else { continue };
+            // CK3's special script handlers all use UTF-8 with BOM. When loaders overlap,
+            // reuse the parse for every consumer with the same encoding.
+            if let Some(kind) = special_kind
+                && encoding == PdxEncoding::Utf8Bom
+            {
+                if loaders.is_empty() {
+                    entries.extend(excluded_script_definitions(queries, file, kind, block));
+                    continue;
+                }
+                entries.extend(excluded_script_definitions(queries, file, kind, block.clone()));
+            }
+            if let Some((last, others)) = loaders.split_last()
+                && let Some(db) = db.as_mut()
+            {
+                for loader in others {
+                    loader.add_block(db, block.clone());
+                }
+                last.add_block(db, block);
+            }
+        }
+        if let Some(mut db) = db {
+            db.add_subitems();
+            entries.extend(db.lookup.unwrap().entries);
+        }
+        entries
+    }
+}
+
+fn excluded_script_definitions(
+    queries: &Arc<LookupQueries>,
+    file: &FileEntry,
+    kind: Item,
+    block: Block,
+) -> Vec<Definition> {
+    // The native handlers pick the actual key, including file-local events and scalar script values.
+    macro_rules! inspect_handler {
+        ($handler:ty) => {{
+            let mut handler = <$handler>::default();
+            handler.lookup = Some(DefinitionHistory::new(queries));
+            handler.handle_file(file, block);
+            handler.lookup.unwrap().entries
+        }};
+    }
+    match kind {
+        Item::Event => inspect_handler!(Events),
+        Item::OnAction => inspect_handler!(OnActions),
+        Item::Trait => inspect_handler!(Traits),
+        Item::ScriptValue => inspect_handler!(ScriptValues),
+        Item::ScriptedEffect => inspect_handler!(Effects),
+        Item::ScriptedTrigger => inspect_handler!(Triggers),
+        _ => unreachable!(),
     }
 }

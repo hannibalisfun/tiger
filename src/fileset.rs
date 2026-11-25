@@ -578,9 +578,13 @@ impl Fileset {
             entry.store_in_pathtable();
             self.filenames.insert(entry.path.clone());
         }
+        #[cfg(feature = "ck3")]
+        if let Some(excluded) = &mut self.lookup_exclusions {
+            excluded.sort_unstable_by(|(a, _), (b, _)| a.cmp(b));
+        }
     }
 
-    pub fn get_files_under<'a>(&'a self, subpath: &'a Path) -> &'a [FileEntry] {
+    pub fn get_files_under(&self, subpath: &Path) -> &[FileEntry] {
         let start = self.ordered_files.partition_point(|entry| entry.path < subpath);
         let end = start
             + self.ordered_files[start..].partition_point(|entry| entry.path.starts_with(subpath));
@@ -598,6 +602,52 @@ impl Fileset {
             FileKind::Jomini => "Jomini",
             FileKind::Internal => "Internal",
         }
+    }
+
+    #[cfg(feature = "ck3")]
+    fn lookup_layer(&self, label: &str) -> Option<FileKind> {
+        std::iter::once(self.the_mod.kind)
+            .chain(self.loaded_mods.iter().rev().map(LoadedMod::kind))
+            .chain(self.loaded_dlcs.iter().rev().map(LoadedMod::kind))
+            .chain([FileKind::Vanilla, FileKind::Jomini, FileKind::Clausewitz])
+            .find(|&kind| self.source_label(kind) == label)
+    }
+
+    #[cfg(feature = "ck3")]
+    pub(crate) fn lookup_file_mask(
+        &self,
+        label: &str,
+        path: &Path,
+    ) -> Option<(&'static str, &str)> {
+        let kind = self.lookup_layer(label)?;
+        let parent = path.parent()?;
+        if let Some(layer) = std::iter::once(&self.the_mod)
+            .chain(self.loaded_mods.iter().rev())
+            .find(|layer| layer.kind > kind && layer.should_replace(parent))
+        {
+            return Some(("replace_path", &layer.label));
+        }
+        let file = self.get_files_under(path).first()?;
+        (file.path() == path && file.kind() > kind)
+            .then(|| ("same_path", self.source_label(file.kind())))
+    }
+
+    #[cfg(feature = "ck3")]
+    pub(crate) fn lookup_lower_file(&self, label: &str, path: &Path) -> Option<&FileEntry> {
+        let kind = self.lookup_layer(label)?;
+        let excluded = self.lookup_exclusions.as_deref()?;
+        let start = excluded.partition_point(|(entry, _)| entry.path() < path);
+        let displaced = excluded[start..]
+            .iter()
+            .take_while(|(entry, _)| entry.path() == path)
+            .filter(|(_, reason)| *reason == "same_path")
+            .map(|(entry, _)| entry);
+        self.get_files_under(path)
+            .iter()
+            .filter(|entry| entry.path() == path)
+            .chain(displaced)
+            .filter(|entry| entry.kind() < kind)
+            .max_by_key(|entry| entry.kind())
     }
 
     pub fn filter_map_under<F, T>(&self, subpath: &Path, f: F) -> Vec<T>
