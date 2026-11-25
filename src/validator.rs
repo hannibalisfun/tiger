@@ -466,11 +466,21 @@ impl<'a> Validator<'a> {
     /// Expect no more than one `name` field in the block.
     /// Returns true iff the field is present.
     pub fn field_action(&mut self, name: &str, sc: &ScopeContext) -> bool {
+        self.field_action_with(name, sc, |_| {})
+    }
+
+    pub fn field_action_with<F: FnMut(&Token)>(
+        &mut self,
+        name: &str,
+        sc: &ScopeContext,
+        mut visit: F,
+    ) -> bool {
         let sev = self.max_severity;
         let data = &self.data;
         self.field_check(name, AllowInject::Yes, |_, bv| {
             if let Some(token) = bv.expect_value() {
                 self.data.verify_exists_max_sev(Item::OnAction, token, sev);
+                visit(token);
                 if let Some(mut action_sc) = sc.root_for_action(token, self.data) {
                     self.data.on_actions.validate_call(token, data, &mut action_sc);
                 }

@@ -10,6 +10,7 @@ use crate::everything::Everything;
 use crate::item::Item;
 use crate::lookup::{LookupQueries, location};
 use crate::macros::MACRO_MAP;
+use crate::on_action_reachability::FiringSites;
 use crate::pathtable::PathTableIndex;
 use crate::token::{Loc, Token};
 
@@ -17,6 +18,7 @@ use crate::token::{Loc, Token};
 pub(crate) struct CallerLookup {
     pub(crate) queries: Arc<LookupQueries>,
     pub(crate) include_unresolved: bool,
+    pub(crate) firings: Option<FiringSites>,
     hits: Mutex<BTreeMap<(usize, Resolution, Item, Loc), BTreeSet<Loc>>>,
 }
 
@@ -34,7 +36,7 @@ pub(crate) struct CallerResults {
 
 impl CallerLookup {
     pub(crate) fn new(queries: Arc<LookupQueries>) -> Self {
-        Self { queries, include_unresolved: false, hits: Mutex::default() }
+        Self { queries, include_unresolved: false, firings: None, hits: Mutex::default() }
     }
 
     fn record(
@@ -53,49 +55,7 @@ impl CallerLookup {
 
     pub(crate) fn results(&self, data: &Everything) -> Vec<CallerResults> {
         let hits = self.hits.lock().unwrap();
-        let mut owners = Owners::new();
-        let mut paths = BTreeSet::new();
-        for (_, _, _, loc) in hits.keys() {
-            for site in expansion_chain(*loc) {
-                owners.entry(site.idx).or_default();
-                paths.insert(site.pathname());
-            }
-        }
-        if owners.is_empty() {
-            return vec![CallerResults::default(); self.queries.len()];
-        }
-        // Only these registries represent top-level definitions throughout their files.
-        // In particular, a trait flag or a variable named by a nested field is not an owner.
-        for kind in [
-            Item::ScriptedEffect,
-            Item::ScriptedTrigger,
-            Item::ScriptValue,
-            Item::Event,
-            Item::CharacterInteraction,
-            Item::Decision,
-            Item::Building,
-            Item::DistrictType,
-            Item::Story,
-            Item::Scheme,
-            Item::ScriptedGui,
-            Item::ActivityType,
-            Item::Trait,
-        ] {
-            if paths.iter().any(|path| path.starts_with(Path::new(kind.path()))) {
-                for key in data.iter_keys(kind) {
-                    add_owner(&mut owners, kind, key);
-                }
-            }
-        }
-        for (kind, key) in data.events.local_script_keys() {
-            add_owner(&mut owners, kind, key);
-        }
-        for key in data.on_actions.fragment_keys() {
-            add_owner(&mut owners, Item::OnAction, key);
-        }
-        for keys in owners.values_mut() {
-            keys.sort_unstable_by_key(|(loc, _, _)| (loc.line, loc.column));
-        }
+        let owners = Owners::for_sites(data, hits.keys().map(|(_, _, _, loc)| *loc));
 
         // Path-table indices depend on file registration order. Sort by public locations
         // (including the invocation chain) for identical results across worker counts.
@@ -105,15 +65,9 @@ impl CallerLookup {
             let mut sites = expansion_chain(loc).map(|site| {
                 sort_key.push((site.pathname(), site.kind, site.line, site.column));
                 let mut value = location(data, site);
-                if let Some(keys) = owners.get(&site.idx) {
-                    let index = keys.partition_point(|(start, _, _)| {
-                        (start.line, start.column) <= (site.line, site.column)
-                    });
-                    if index > 0 {
-                        let (_, kind, name) = keys[index - 1];
-                        value["caller"] = name.into();
-                        value["caller_kind"] = <&'static str>::from(kind).into();
-                    }
+                if let Some((kind, name)) = owners.at(site) {
+                    value["caller"] = name.into();
+                    value["caller_kind"] = <&'static str>::from(kind).into();
                 }
                 value
             });
@@ -147,15 +101,70 @@ impl CallerLookup {
     }
 }
 
-type Owners = BTreeMap<PathTableIndex, Vec<(Loc, Item, &'static str)>>;
+#[derive(Default)]
+pub(crate) struct Owners(BTreeMap<PathTableIndex, Vec<(Loc, Item, &'static str)>>);
 
-fn add_owner(owners: &mut Owners, kind: Item, key: &Token) {
-    if let Some(keys) = owners.get_mut(&key.loc.idx) {
-        keys.push((key.loc, kind, key.as_str()));
+impl Owners {
+    pub(crate) fn for_sites(data: &Everything, sites: impl Iterator<Item = Loc>) -> Self {
+        let mut owners = Self::default();
+        let mut paths = BTreeSet::new();
+        for site in sites.flat_map(expansion_chain) {
+            owners.0.entry(site.idx).or_default();
+            paths.insert(site.pathname());
+        }
+        if paths.is_empty() {
+            return owners;
+        }
+        let mut add = |kind, key: &Token| {
+            if let Some(keys) = owners.0.get_mut(&key.loc.idx) {
+                keys.push((key.loc, kind, key.as_str()));
+            }
+        };
+        // Only top-level declarations can own a call site.
+        for kind in [
+            Item::ScriptedEffect,
+            Item::ScriptedTrigger,
+            Item::ScriptValue,
+            Item::Event,
+            Item::CharacterInteraction,
+            Item::Decision,
+            Item::Building,
+            Item::DistrictType,
+            Item::Story,
+            Item::Scheme,
+            Item::ScriptedGui,
+            Item::ActivityType,
+            Item::Trait,
+        ] {
+            if paths.iter().any(|path| path.starts_with(Path::new(kind.path()))) {
+                for key in data.iter_keys(kind) {
+                    add(kind, key);
+                }
+            }
+        }
+        for (kind, key) in data.events.local_script_keys() {
+            add(kind, key);
+        }
+        for key in data.on_actions.fragment_keys() {
+            add(Item::OnAction, key);
+        }
+        for keys in owners.0.values_mut() {
+            keys.sort_unstable_by_key(|(loc, _, _)| (loc.line, loc.column));
+        }
+        owners
+    }
+
+    pub(crate) fn at(&self, site: Loc) -> Option<(Item, &'static str)> {
+        let keys = self.0.get(&site.idx)?;
+        let index = keys.partition_point(|(start, _, _)| {
+            (start.line, start.column) <= (site.line, site.column)
+        });
+        let (_, kind, name) = *keys.get(index.checked_sub(1)?)?;
+        Some((kind, name))
     }
 }
 
-fn expansion_chain(loc: Loc) -> impl Iterator<Item = Loc> {
+pub(crate) fn expansion_chain(loc: Loc) -> impl Iterator<Item = Loc> {
     std::iter::successors(Some(loc), |site| site.link_idx.and_then(|idx| MACRO_MAP.get_loc(idx)))
 }
 

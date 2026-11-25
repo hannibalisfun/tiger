@@ -226,6 +226,21 @@ def print_lookup(found):
         print(f'  {definition["status"]} {definition["kind"]}{suffix}  {location(definition)}{reason}')
     if not found["definitions"]:
         print("  No indexed definition")
+    if reach := found.get("reachability"):
+        print(f'  On-action reachability: {reach["status"]}')
+
+        def print_path(start, steps):
+            print("    " + " -> ".join([start, *(step["on_action"] for step in steps)]))
+            for step in steps:
+                print(f'      {step["via"]} at {location(step["source"])}')
+                for site in step["expansion"]:
+                    print(f'        expanded at {location(site)}')
+
+        for path in reach["engine_paths"]:
+            print_path(f'CK3 -> {path["root"]}', path["steps"])
+        for call in reach["script_calls"]:
+            first = call["steps"][0]
+            print_path(first["caller"] or "(script caller)", call["steps"])
     for site in found["callers"]:
         print(f'  {site["kind"]} reference in {site.get("caller") or "(unknown caller)"}  {location(site)}')
         for call in site.get("expansion", []):
@@ -364,7 +379,7 @@ def main():
     parser.add_argument("--parent", action="append", default=[], help="Loaded parent directory, lowest priority first")
     parser.add_argument("--tiger", type=Path, default=DEFAULT_BINARY)
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--lookup", metavar="SYMBOL", help="Show loaded definitions and known callers of an identifier")
+    mode.add_argument("--lookup", metavar="SYMBOL", help="Show loaded definitions, known callers and on-action firing paths")
     mode.add_argument("--impact", nargs="?", const="HEAD", metavar="REV",
                       help="Report callers of definitions changed since REV (default HEAD) and run full validation")
     parser.add_argument("--impact-layer", metavar="LABEL", help="Git input for --impact, MOD (default) or parent-N")

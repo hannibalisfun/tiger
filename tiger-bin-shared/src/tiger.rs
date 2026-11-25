@@ -78,7 +78,7 @@ struct ValidateArgs {
     /// Output the reports in JSON format
     #[clap(long)]
     json: bool,
-    /// Look up a script identifier in this load order and print its definitions and callers as JSON.
+    /// Print an identifier's definitions, callers and on-action firing paths as JSON.
     #[cfg(feature = "ck3")]
     #[clap(long, value_name = "SYMBOL", value_parser = clap::builder::NonEmptyStringValueParser::new())]
     lookup: Option<String>,

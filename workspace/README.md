@@ -44,6 +44,17 @@ Add `--json` for `lookup.definitions` and `lookup.callers`. Definitions include 
 
 Tiger retains shadow history for scripted effects, scripted triggers, script values, events, on-actions, traits, and the common item database. Other specialized registries can provide their retained keys. Caller rows identify references that Tiger resolved during validation, including macro invocation locations when expanded. Dynamically assembled identifiers that Tiger cannot resolve and engine-only calls can have no caller row. An empty caller list alone cannot establish that a symbol is unused.
 
+The same lookup shows what can fire an active on-action.
+
+```powershell
+py -3 workspace/run.py --game $game --mod '../POD Reference' --lookup POD_on_death
+py -3 workspace/run.py --game $game --mod '../POD Reference' --lookup tremere_council_events
+```
+
+`lookup.reachability.engine_paths` gives one shortest path per reachable engine hook, starting from the names marked `From Code: Yes` in the CK3 1.21.0 export. Each step identifies its registration or dispatch, file, line and load layer. Tiger follows `on_actions`, positive-weight `random_on_action` entries, `first_valid_on_action`, `fallback`, and explicit `trigger_event` calls from the effective script. Masked files and displaced effect blocks contribute no firing paths.
+
+`script_calls` shows each validated explicit dispatch that leads to the queried hook, including the enclosing caller where known. A status of `script caller` means an explicit call was found and the caller's own execution is unproven. `no known firing path` means Tiger could establish neither an engine route nor an external script dispatch. Dynamic names, unexpanded macros and other game-system callbacks can supply additional paths. Runtime trigger conditions and random selections determine whether a wired hook actually fires.
+
 Each run includes `metadata.input_revisions` in load order, with the input path, containing Git repository, full HEAD revision and dirty state. For a nested mod such as `devpod`, dirty state covers tracked changes and non-ignored untracked files under that mod directory. A non-Git game install has a launcher version and null Git fields. A Git-ignored input may have an enclosing revision and unknown dirty state. In lookup mode exit **0** means Tiger indexed an active definition or contribution, **1** means the identifier is absent or fully shadowed, and **2** indicates a runner or Tiger failure.
 
 ## Find callers affected by a Git diff

@@ -73,6 +73,10 @@ impl LookupQueries {
         self.exact.len()
     }
 
+    pub(crate) fn includes_on_action(&self, actions: &OnActions) -> bool {
+        self.exact.keys().any(|name| actions.exists(name))
+    }
+
     pub(crate) fn indices(&self, kind: Item, name: &str) -> &[usize] {
         if kind == Item::Event
             && let Some((namespace, id)) = event_id(name)
@@ -302,6 +306,12 @@ impl Everything {
         }).collect();
         for (name, &index) in &queries.exact {
             found[index]["symbol"] = json!(name);
+            if let Some(sites) =
+                self.lookup_callers.as_ref().and_then(|lookup| lookup.firings.as_ref())
+                && self.on_actions.exists(name)
+            {
+                found[index]["reachability"] = sites.reachability(self, name);
+            }
         }
         if requested.len() == found.len()
             && requested.iter().enumerate().all(|(i, name)| queries.exact.get(name) == Some(&i))

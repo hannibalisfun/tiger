@@ -823,6 +823,13 @@ impl Everything {
             }
             self.database.scan_variables(&mut self.variables);
         });
+        #[cfg(feature = "ck3")]
+        if let Some(lookup) = &mut self.lookup_callers
+            && !lookup.include_unresolved
+            && lookup.queries.includes_on_action(&self.on_actions)
+        {
+            lookup.firings = Some(Default::default());
+        }
     }
 
     fn validate_all_generic<'a>(&'a self, s: &Scope<'a>) {

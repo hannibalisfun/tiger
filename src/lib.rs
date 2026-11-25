@@ -96,6 +96,8 @@ mod mod_metadata;
 mod modfile;
 mod modif;
 mod on_action;
+#[cfg(feature = "ck3")]
+mod on_action_reachability;
 mod parse;
 mod pathtable;
 mod pdxfile;

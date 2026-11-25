@@ -319,6 +319,8 @@ fn validate_on_action_internal(
                 vd.multi_field_validated_block_sc("delay", sc, validate_duration);
             }
             for token in vd.values() {
+                #[cfg(feature = "ck3")]
+                data.record_registration(on_action, "on_actions", token);
                 data.verify_exists(Item::OnAction, token);
                 if let Some(mut action_sc) = sc.root_for_action(token, data) {
                     data.on_actions.validate_call(token, data, &mut action_sc);
@@ -337,6 +339,10 @@ fn validate_on_action_internal(
                 if token.is("0") {
                     continue;
                 }
+                #[cfg(feature = "ck3")]
+                if _key.get_integer().is_some_and(|weight| weight > 0) {
+                    data.record_registration(on_action, "random_on_action", token);
+                }
                 data.verify_exists(Item::OnAction, token);
                 if let Some(mut action_sc) = sc.root_for_action(token, data) {
                     data.on_actions.validate_call(token, data, &mut action_sc);
@@ -347,6 +353,8 @@ fn validate_on_action_internal(
         vd.multi_field_validated_block("first_valid_on_action", |b, data| {
             let mut vd = Validator::new(b, data);
             for token in vd.values() {
+                #[cfg(feature = "ck3")]
+                data.record_registration(on_action, "first_valid_on_action", token);
                 data.verify_exists(Item::OnAction, token);
                 if let Some(mut action_sc) = sc.root_for_action(token, data) {
                     data.on_actions.validate_call(token, data, &mut action_sc);
@@ -354,7 +362,10 @@ fn validate_on_action_internal(
             }
         });
         // TODO: check for infinite fallback loops?
-        vd.field_action("fallback", sc);
+        vd.field_action_with("fallback", sc, |_target| {
+            #[cfg(feature = "ck3")]
+            data.record_registration(on_action, "fallback", _target);
+        });
         #[cfg(feature = "ck3")]
         if Game::is_ck3()
             && let Some(token) = vd.field_value("fallback_event")

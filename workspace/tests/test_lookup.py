@@ -46,6 +46,75 @@ class LookupTests(unittest.TestCase):
         self.assertEqual(result.returncode, expected, result.stderr or result.stdout[:5000])
         return json.loads(result.stdout)
 
+    def test_disconnected_on_action(self):
+        target = "stress_loss_confider"  # Present in the engine export with From Code: No.
+        early = "common/on_action/10_reachability.txt"
+        masked = "common/on_action/20_masked.txt"
+        late = "common/on_action/90_reachability.txt"
+        script(self.parent, early,
+               f"on_death = {{ effect = {{ trigger_event = {{ on_action = {target} }} }} }}\n")
+        script(self.parent, masked, f"on_death = {{ on_actions = {{ {target} }} }}\n")
+        script(self.mod, masked, "# This file replaces the parent registration.\n")
+        script(self.mod, late, f"on_death = {{ effect = {{ }} random_on_action = {{ 0 = {target} }} }}\n"
+               f"{target} = {{ on_actions = {{ tiger_detached }} }}\n"
+               f"tiger_detached = {{ fallback = {target} }}\n")
+        found = self.lookup(target)["lookup"]
+        self.assertTrue(found["callers"])
+        self.assertEqual(found["reachability"], {
+            "status": "no known firing path", "engine_paths": [], "script_calls": [],
+        })
+        plain = subprocess.check_output([*self.command, "--lookup", target], encoding="utf-8")
+        self.assertIn("no known firing path", plain)
+
+    def test_explicit_on_action_dispatch(self):
+        hooks = "common/on_action/tiger_reachability.txt"
+        events = "events/tiger_reachability.txt"
+        script(self.mod, hooks, "tiger_relay = { first_valid_on_action = { tiger_child } }\n"
+               "tiger_child = { }\n")
+        script(self.mod, events, "namespace = tiger_reach\ntiger_reach.0001 = {\n"
+               "\ttype = character_event\n\thidden = yes\n\timmediate = {\n"
+               "\t\ttrigger_event = {\n\t\t\ton_action = tiger_relay\n\t\t\tdays = 1\n\t\t}\n\t}\n}\n")
+        found = self.lookup("tiger_child")["lookup"]["reachability"]
+        self.assertEqual((found["status"], found["engine_paths"]), ("script caller", []))
+        [call] = found["script_calls"]
+        self.assertEqual([(s["caller_kind"], s["caller"], s["via"], s["on_action"],
+                           s["source"]["from"], s["source"]["path"], s["source"]["line"])
+                          for s in call["steps"]], [
+            ("event", "tiger_reach.0001", "trigger_event", "tiger_relay", "MOD", events, 6),
+            ("on_action", "tiger_relay", "first_valid_on_action", "tiger_child", "MOD", hooks, 1),
+        ])
+        direct = self.lookup("tiger_relay")["lookup"]["reachability"]["script_calls"]
+        self.assertEqual(direct, [{"steps": call["steps"][:1]}])
+        plain = subprocess.check_output([*self.command, "--lookup", "tiger_relay"], encoding="utf-8")
+        self.assertIn("tiger_reach.0001 -> tiger_relay", plain)
+        self.assertIn(f"trigger_event at MOD {events}:6", plain)
+
+    def test_engine_on_action_path(self):
+        path = "common/on_action/tiger_reachability.txt"
+        script(self.mod, path, "on_death = { random_on_action = { 100 = tiger_relay } }\n"
+               "tiger_relay = { effect = { trigger_event = { on_action = tiger_child } } }\n"
+               "tiger_child = { on_actions = { tiger_relay } }\n")
+        found = self.lookup("tiger_child")["lookup"]["reachability"]
+        self.assertEqual(found["status"], "engine path")
+        [route] = found["engine_paths"]
+        self.assertEqual(route["root"], "on_death")
+        self.assertEqual([(s["via"], s["on_action"], s["source"]["line"]) for s in route["steps"]],
+                         [("random_on_action", "tiger_relay", 1), ("trigger_event", "tiger_child", 2)])
+        self.assertEqual(self.lookup("on_death")["lookup"]["reachability"]["engine_paths"],
+                         [{"root": "on_death", "steps": []}])
+
+    def test_expanded_on_action_dispatch(self):
+        effect = "common/scripted_effects/tiger_dispatch.txt"
+        hook = "common/on_action/tiger_dispatch.txt"
+        script(self.mod, effect, "tiger_dispatch = { trigger_event = { on_action = $HOOK$ } }\n")
+        script(self.mod, hook, "on_death = { effect = { tiger_dispatch = { HOOK = tiger_child } } }\n"
+               "tiger_child = { }\n")
+        [route] = self.lookup("tiger_child")["lookup"]["reachability"]["engine_paths"]
+        [step] = route["steps"]
+        self.assertEqual((route["root"], step["caller"], step["via"], step["source"]["path"]),
+                         ("on_death", "on_death", "trigger_event", effect))
+        self.assertEqual([(s["path"], s["line"]) for s in step["expansion"]], [(hook, 1)])
+
     def test_load_order_and_semantic_callers(self):
         key = "tiger_provenance_effect"
         same = "common/scripted_effects/50_shared.txt"
@@ -73,6 +142,7 @@ class LookupTests(unittest.TestCase):
                "  }\n}\n")
 
         data = self.lookup(key)["lookup"]
+        self.assertNotIn("reachability", data)
         definitions = {(d["from"], d["path"]): d for d in data["definitions"]}
         self.assertEqual(len(data["definitions"]), 4)
         for path, reason, param in [(older, "overridden_definition", "FORMER"),

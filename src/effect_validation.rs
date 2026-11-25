@@ -393,7 +393,10 @@ pub fn validate_trigger_event(
             let mut vd = Validator::new(block, data);
             vd.set_case_sensitive(false);
             vd.field_event("id", sc);
-            vd.field_action("on_action", sc);
+            vd.field_action_with("on_action", sc, |_target| {
+                #[cfg(feature = "ck3")]
+                data.record_trigger_event(_key, _target);
+            });
             #[cfg(feature = "ck3")]
             if Game::is_ck3() {
                 vd.field_target("saved_event_id", sc, Scopes::Flag);
