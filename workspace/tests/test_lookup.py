@@ -138,6 +138,8 @@ class LookupTests(unittest.TestCase):
         self.assertTrue(revisions()["dirty"])
 
     def test_resolved_item_and_trigger(self):
+        # A packaging warning has no bearing on the load order or the returned callers.
+        (self.mod / "descriptor.mod").write_text('name="Fixture"\npicture="custom.png"\n')
         script(self.parent, "common/traits/traits.txt", "tiger_lookup_trait = { }\n")
         script(self.parent, "common/scripted_triggers/triggers.txt",
                "tiger_can_fight = { has_trait = tiger_lookup_trait }\n")
@@ -151,6 +153,14 @@ class LookupTests(unittest.TestCase):
         trigger = self.lookup("tiger_can_fight")["lookup"]
         self.assertEqual([(s["kind"], s["caller"], s["line"]) for s in trigger["callers"]],
                          [("scripted_trigger", "three_year_playable_pulse", 2)])
+
+    def test_malformed_descriptor(self):
+        (self.mod / "descriptor.mod").write_text('name="Fixture"\nreplace_path={\n')
+        result = subprocess.run([*self.command, "--lookup", "tiger_cost", "--json"],
+                                capture_output=True, encoding="utf-8")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("brace-error", result.stderr)
+        self.assertEqual(result.stdout, "")
 
     def test_event_number_aliases_and_priority(self):
         hidden = "events/00_hidden.txt"

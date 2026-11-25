@@ -303,8 +303,12 @@ pub fn run(
             let mut output = stdout();
 
             #[cfg(feature = "ck3")]
-            if args.lookup.is_some() && emit_reports(&mut std::io::stderr(), false, false, false) {
-                bail!("Invalid config");
+            if args.lookup.is_some() {
+                let invalid = tiger_lib::has_error_reports();
+                emit_reports(&mut std::io::stderr(), false, false, false);
+                if invalid {
+                    bail!("Invalid lookup configuration");
+                }
             }
             if !args.json && emit_reports(&mut output, false, args.consolidate, false) {
                 bail!("Invalid config");

@@ -391,6 +391,15 @@ pub fn emit_reports<O: Write + Send>(
     Errors::get_mut().emit_reports(output, json, consolidate, summary)
 }
 
+/// Check pending, visible diagnostics before emitting and clearing them.
+pub fn has_error_reports() -> bool {
+    let errors = Errors::get_mut();
+    errors.storage.iter().any(|(report, occurrences)| {
+        report.severity >= crate::report::Severity::Error
+            && occurrences.iter().any(|pointers| !errors.should_ignore(report, pointers))
+    })
+}
+
 /// Extract the stored reports, sort them, and return them as a hashmap with the occurrences for
 /// each instance of metadata split out.
 ///

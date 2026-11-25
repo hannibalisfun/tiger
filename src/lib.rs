@@ -38,8 +38,8 @@ pub use crate::mod_metadata::ModMetadata;
 pub use crate::modfile::ModFile;
 pub use crate::report::{
     Confidence, LogReportMetadata, LogReportPointers, PointedMessage, Severity,
-    add_loaded_mod_root, disable_ansi_colors, emit_reports, log, set_output_style,
-    set_show_loaded_mods, set_show_vanilla, suppress_from_json, take_reports,
+    add_loaded_mod_root, disable_ansi_colors, emit_reports, has_error_reports, log,
+    set_output_style, set_show_loaded_mods, set_show_vanilla, suppress_from_json, take_reports,
 };
 pub use crate::token::{Loc, Token};
 
