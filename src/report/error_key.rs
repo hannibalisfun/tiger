@@ -73,6 +73,7 @@ pub enum ErrorKey {
     Deprecated,
     Variables,
     FlagConversion,
+    OnActionConflict,
     DefinitionName,
     Prefixes,
     WrongUse,

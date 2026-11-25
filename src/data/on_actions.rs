@@ -14,7 +14,8 @@ use crate::on_action::on_action_scopecontext;
 use crate::parse::ParserMemory;
 use crate::pdxfile::PdxFile;
 #[cfg(any(feature = "ck3", feature = "hoi4"))]
-use crate::report::{ErrorKey, err};
+use crate::report::err;
+use crate::report::{ErrorKey, warn};
 use crate::scopes::Scopes;
 use crate::token::Token;
 use crate::tooltipped::Tooltipped;
@@ -147,8 +148,7 @@ impl OnAction {
     }
 
     pub fn validate(&self, data: &Everything) {
-        let mut seen_trigger = false;
-        let mut seen_effect = false;
+        let mut winners = OnActionBlocks::default();
         for (key, block) in self.actions.iter().rev() {
             // Make an sc for each array entry, to make sure it uses the local `key`.
             // This is important to distinguish between vanilla errors and mod errors.
@@ -159,7 +159,7 @@ impl OnAction {
                 generated_sc.set_strict_scopes(false);
                 generated_sc
             };
-            validate_on_action_internal(block, data, &mut sc, &mut seen_trigger, &mut seen_effect);
+            validate_on_action_internal(block, data, &mut sc, &mut winners, Some(key));
         }
     }
 
@@ -168,11 +168,51 @@ impl OnAction {
     /// but in this case it is easier to just call the full function because
     /// everything in an action is scope related.
     pub fn validate_call(&self, data: &Everything, sc: &mut ScopeContext) {
-        let mut seen_trigger = false;
-        let mut seen_effect = false;
+        let mut winners = OnActionBlocks::default();
         for (_, block) in self.actions.iter().rev() {
-            validate_on_action_internal(block, data, sc, &mut seen_trigger, &mut seen_effect);
+            validate_on_action_internal(block, data, sc, &mut winners, None);
         }
+    }
+}
+
+#[derive(Default)]
+struct OnActionBlocks {
+    trigger: Option<Token>,
+    effect: Option<Token>,
+}
+
+fn validate_single_block(
+    vd: &mut Validator,
+    name: &str,
+    winner: &mut Option<Token>,
+    on_action: Option<&Token>,
+    mut validate: impl FnMut(&Block, &Everything),
+) {
+    // Declarations arrive in reverse load order. Keep the first selected block for every report.
+    let select = |key: &Token, block: &Block, data: &Everything| {
+        if let Some(effective) = winner.as_ref() {
+            if Game::is_ck3()
+                && let Some(action) = on_action
+            {
+                warn(ErrorKey::OnActionConflict)
+                    .strong()
+                    .msg(format!("on-action `{action}` has competing `{name}` blocks"))
+                    .info(
+                        "To extend this hook, append a uniquely named child through `on_actions`.",
+                    )
+                    .loc_msg(key, "ignored block")
+                    .loc_msg(effective, "winning block")
+                    .push();
+            }
+        } else {
+            *winner = Some(key.clone());
+            validate(block, data);
+        }
+    };
+    if Game::is_ck3() {
+        vd.multi_field_validated_key_block(name, select);
+    } else {
+        vd.field_validated_key_block(name, select);
     }
 }
 
@@ -180,32 +220,31 @@ fn validate_on_action_internal(
     block: &Block,
     data: &Everything,
     sc: &mut ScopeContext,
-    seen_trigger: &mut bool,
-    seen_effect: &mut bool,
+    winners: &mut OnActionBlocks,
+    on_action: Option<&Token>,
 ) {
     let mut vd = Validator::new(block, data);
     if Game::is_jomini() {
-        vd.field_validated_block("trigger", |block, data| {
-            if !*seen_trigger {
-                *seen_trigger = true;
+        validate_single_block(
+            &mut vd,
+            "trigger",
+            &mut winners.trigger,
+            on_action,
+            |block, data| {
                 validate_trigger(block, data, sc, Tooltipped::No);
-            }
-        });
+            },
+        );
         vd.field_validated_block_sc("weight_multiplier", sc, validate_modifiers_with_base);
     }
 
     if Game::is_hoi4() {
         // Hoi4 allows defining an effect in each entry.
         vd.multi_field_validated_block("effect", |block, data| {
-            *seen_effect = true;
             validate_effect(block, data, sc, Tooltipped::No);
         });
     } else {
-        vd.field_validated_block("effect", |block, data| {
-            if !*seen_effect {
-                *seen_effect = true;
-                validate_effect(block, data, sc, Tooltipped::No);
-            }
+        validate_single_block(&mut vd, "effect", &mut winners.effect, on_action, |block, data| {
+            validate_effect(block, data, sc, Tooltipped::No);
         });
     }
 
@@ -331,7 +370,5 @@ fn validate_on_action_internal(
 
 #[cfg(feature = "vic3")]
 pub fn validate_on_action(block: &Block, data: &Everything, sc: &mut ScopeContext) {
-    let mut seen_trigger = false;
-    let mut seen_effect = false;
-    validate_on_action_internal(block, data, sc, &mut seen_trigger, &mut seen_effect);
+    validate_on_action_internal(block, data, sc, &mut OnActionBlocks::default(), None);
 }

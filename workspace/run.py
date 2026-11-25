@@ -404,8 +404,11 @@ def main():
         for row in result.get("reports", []):
             for index, loc in enumerate(row["locations"] or [{}]):
                 where = f"{loc.get('from', '?')} {loc.get('path', '?')}:{loc.get('linenr') or 0}"
-                print(f"{row['severity']}({row['key']}) {where}: {row['message']}" if index == 0
-                      else f"  via {where}")
+                if index == 0:
+                    tag = f" ({loc['tag']})" if loc.get("tag") else ""
+                    print(f"{row['severity']}({row['key']}) {where}{tag}: {row['message']}")
+                else:
+                    print(f"  {loc.get('tag') or 'via'} {where}")
         if "reports" in result:
             meta = result["metadata"]
             print(f"{len(result['reports'])} findings, {meta['removed']} removed; {meta['seconds']} s; baseline cache {meta['cache']}")
