@@ -301,7 +301,7 @@ dependencies = [
 
 [[package]]
 name = "ck3-tiger"
-version = "1.19.0-pod.2"
+version = "1.19.0-pod.3"
 dependencies = [
  "anyhow",
  "clap",

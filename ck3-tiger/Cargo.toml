@@ -1,6 +1,6 @@
 [package]
 name = "ck3-tiger"
-version = "1.19.0-pod.2"
+version = "1.19.0-pod.3"
 edition = "2024"
 license = "GPL-3.0-or-later"
 default-run = "ck3-tiger"

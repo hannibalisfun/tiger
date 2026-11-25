@@ -1,0 +1,6 @@
+﻿tiger_copy_combat_team = {
+	set_variable = { name = tiger_macro_team value = $SLOT$.var:combat_team }
+	if = { limit = { var:tiger_macro_team = flag:player } }
+	save_scope_value_as = { name = tiger_macro_lost value = $SLOT$.var:combat_team } # bad macro copy
+	if = { limit = { scope:tiger_macro_lost = flag:player } }
+}

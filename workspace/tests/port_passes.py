@@ -13,6 +13,7 @@ PASSES = {
     "trade": ("trade", "trade_script"),
     "maps": ("maps",),
     "gui": ("gui",),
+    "flags": ("flag_conversion",),
 }
 
 

@@ -1,0 +1,6 @@
+[
+  {"path":"common/decisions/tiger_combat_flag_conversion.txt","marker":"# bad persistent copy","key":"flag-conversion","severity":"error","contains":"cannot preserve a flag from `scope:tiger_slot.var:combat_team`"},
+  {"path":"common/decisions/tiger_combat_flag_conversion.txt","marker":"# bad local copy","key":"flag-conversion","severity":"error","contains":"converts the flag in `var:tiger_team_copy`"},
+  {"path":"common/decisions/tiger_combat_flag_conversion.txt","marker":"# bad guarded copy","key":"flag-conversion","severity":"error","contains":"converts the flag in `scope:tiger_slot.var:combat_team`"},
+  {"path":"common/scripted_effects/tiger_combat_flag_macros.txt","marker":"# bad macro copy","key":"flag-conversion","severity":"error","contains":"cannot preserve a flag"}
+]

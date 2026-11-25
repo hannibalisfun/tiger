@@ -100,6 +100,10 @@ pub fn validate_effect_internal(
     special_tokens: &mut SpecialTokens,
 ) -> bool {
     vd.set_case_sensitive(false);
+    #[cfg(feature = "ck3")]
+    if Game::is_ck3() {
+        crate::ck3::flag_conversion::validate(block, caller, data);
+    }
     if caller == "if"
         || caller == "else_if"
         || caller == "else"

@@ -1,0 +1,67 @@
+﻿tiger_combat_flag_cases = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_castle_view.dds" }
+	decision_group_type = pod_splat
+	ai_check_interval = 0
+	effect = {
+		save_scope_as = tiger_slot
+
+		# The slot's team was initialized elsewhere. Filtering the saved copy by a flag fails.
+		save_scope_value_as = { name = tiger_lost_team value = scope:tiger_slot.var:combat_team } # bad persistent copy
+		if = { limit = { scope:tiger_lost_team = flag:player } }
+
+		# A variable copy preserves the team through another variable copy.
+		set_variable = { name = tiger_best_team value = scope:tiger_slot.var:combat_team }
+		set_variable = { name = tiger_current_actor_team value = var:tiger_best_team }
+		if = { limit = { var:tiger_current_actor_team = flag:player } }
+
+		set_variable = { name = tiger_slot_pointer value = scope:tiger_slot }
+		set_variable = { name = tiger_linked_team value = scope:tiger_slot.var:tiger_slot_pointer.var:combat_team }
+		if = { limit = { var:tiger_linked_team = flag:player } }
+
+		save_scope_value_as = { name = tiger_duel_rule value = flag:player }
+		if = { limit = { scope:tiger_duel_rule = flag:player } }
+
+		set_variable = { name = tiger_team_source value = flag:player }
+		set_variable = { name = tiger_team_copy value = var:tiger_team_source }
+		save_scope_value_as = { name = tiger_lost_alias value = var:tiger_team_copy } # bad local copy
+		if = { limit = { scope:tiger_lost_alias = flag:player } }
+
+		if = {
+			limit = { scope:tiger_slot.var:combat_team = flag:enemy }
+			save_scope_value_as = { name = tiger_guarded_team value = scope:tiger_slot.var:combat_team } # bad guarded copy
+		}
+
+		set_variable = { name = tiger_score value = 4 }
+		save_scope_value_as = { name = tiger_saved_score value = var:tiger_score }
+		if = { limit = { scope:tiger_saved_score > 0 } }
+
+		# A later write replaces the local evidence, even when another writer used a flag.
+		save_scope_value_as = { name = tiger_unknown_source value = var:pod_combat_current_actor_team }
+		set_variable = { name = tiger_mixed_team value = flag:player }
+		set_variable = { name = tiger_mixed_team value = scope:tiger_unknown_source }
+		save_scope_value_as = { name = tiger_saved_mixed value = var:tiger_mixed_team }
+
+		save_scope_value_as = { name = tiger_rebound value = var:pod_combat_current_actor_team }
+		save_scope_value_as = { name = tiger_rebound value = flag:enemy }
+		if = { limit = { scope:tiger_rebound = flag:enemy } }
+
+		set_variable = { name = tiger_scope_name value = flag:tiger_dynamic_team }
+		save_scope_value_as = { name = tiger_dynamic_team value = var:pod_combat_current_actor_team }
+		save_scope_value_as = { name = var:tiger_scope_name value = flag:enemy }
+		if = { limit = { scope:tiger_dynamic_team = flag:enemy } }
+
+		if = {
+			limit = { OR = { always = yes scope:tiger_slot.var:combat_team = flag:enemy } }
+			save_scope_value_as = { name = tiger_unproven_team value = scope:tiger_slot.var:combat_team }
+		}
+
+		save_scope_value_as = { name = tiger_branch_team value = var:pod_combat_current_actor_team }
+		if = {
+			limit = { always = yes }
+			save_scope_value_as = { name = tiger_branch_team value = flag:player }
+		}
+		if = { limit = { scope:tiger_branch_team = flag:player } }
+
+		tiger_copy_combat_team = { SLOT = scope:tiger_slot }
+	}
+}

@@ -8,6 +8,7 @@ This branch starts from pharaox's `adapt/ck3-1.20.1.1` at `9f61d918`. The worksp
 | Trade and roads | Goods, categories, county potential goods, toll levels, trader tasks, goods graphics, roads, and road modifiers. Script checks cover market and route operations, monopolies, typed iterator filters, and scope transitions. |
 | Variable maps | Scoped, global, and local storage, key and value lookups, iterators, duration, and quoted macro arguments. Local maps track writes and clears in the call context. Persistent maps combine known write types and leave dynamic writes unconstrained. |
 | GUI data types | The five 1.21 engine exports supply types, functions, promotes and argument counts. Literal database getters resolve through the load order. Known province and character arguments on building and district methods are type-checked. |
+| Flag conversion | `flag-conversion` reports a flag-valued variable copied through `save_scope_value_as`. It points to the copy and the source of the type evidence or a later flag comparison on the saved result. |
 | Earlier cases | District construction scope and complete `trigger_else_if` chains. The inherited faith and rite loaders resolve PoD's hunter faiths. |
 
 ## Build and run
@@ -68,7 +69,9 @@ cargo test --locked -p tiger-lib
 
 The live acceptance command checks the exact five fixture diagnostics and their source lines, seven optional Silver Pack references with Camp Pressure and PoD alone, and zero warnings or errors with all three siblings. The fixture also exercises the valid district and trigger forms. The runner tests use a temporary game fixture to exercise baseline reuse, invalidation, and failure handling. These checks require no changes to the installed game, the reference snapshots, or the mods under test.
 
-To rerun one area, add `--pass districts`, `--pass trade`, `--pass maps`, or `--pass gui` to `port_passes.py`. The schema fixtures use the public runner and PoD as a parent. Each expected error has a source marker, diagnostic key and message check. Any additional warning or error fails the pass.
+To rerun one area, add `--pass districts`, `--pass trade`, `--pass maps`, `--pass gui`, or `--pass flags` to `port_passes.py`. The fixtures use the public runner and PoD as a parent. Each expected error has a source marker, diagnostic key and message check. Any additional warning or error fails the pass.
+
+The combat fixture checks flag values reached through a saved object, a chain of variables, a guarded read and an expanded macro. A direct `set_variable` copy preserves the flag, including `value = scope:candidate_slot.var:combat_team`. Saving a literal such as `flag:player` or a numeric script value also passes. The diagnostic requires local evidence from a write, a guard or a later flag comparison. Across opaque calls and uncertain branches, a conversion can remain undetected.
 
 Road definitions are checked against province IDs. Binary spline geometry requires a separate check. For `has_trade_good_type` the export declares a trade-good receiver and describes a trade route. Neither local source tree contains a resolving call, so Tiger uses the declared receiver. GUI arguments that the engine exports only as `Arg0`, `Arg1`, and so on retain unknown types unless a verified signature is available.
 

@@ -72,6 +72,7 @@ pub enum ErrorKey {
     Overflow,
     Deprecated,
     Variables,
+    FlagConversion,
     DefinitionName,
     Prefixes,
     WrongUse,
