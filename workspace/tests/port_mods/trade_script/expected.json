@@ -1,0 +1,50 @@
+[
+  {
+    "path": "common/decisions/tiger_trade_script.txt",
+    "marker": "wrong goods target",
+    "key": "scopes",
+    "contains": "character"
+  },
+  {
+    "path": "common/decisions/tiger_trade_script.txt",
+    "marker": "missing market iterator target",
+    "key": "field-missing",
+    "contains": "required field `target` missing"
+  },
+  {
+    "path": "common/decisions/tiger_trade_script.txt",
+    "marker": "road trigger on character",
+    "key": "scopes",
+    "contains": "road"
+  },
+  {
+    "path": "common/decisions/tiger_trade_script.txt",
+    "marker": "invalid_tiger_trade_price",
+    "key": "choice",
+    "contains": "buy_add"
+  },
+  {
+    "path": "common/decisions/tiger_trade_script.txt",
+    "marker": "tiger_unknown_trade_good",
+    "key": "missing-item",
+    "contains": "tiger_unknown_trade_good"
+  },
+  {
+    "path": "common/decisions/tiger_trade_script.txt",
+    "marker": "good used as market",
+    "key": "scopes",
+    "contains": "trade market"
+  },
+  {
+    "path": "common/decisions/tiger_trade_script.txt",
+    "marker": "tiger_unknown_trader_task",
+    "key": "missing-item",
+    "contains": "tiger_unknown_trader_task"
+  },
+  {
+    "path": "common/decisions/tiger_trade_script.txt",
+    "marker": "competing monopoly owners",
+    "key": "validation",
+    "contains": "expected exactly 1 of owning_character"
+  }
+]

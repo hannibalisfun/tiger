@@ -1,0 +1,8 @@
+﻿tiger_toll = {
+	route_owner_toll_rate = 0.125
+	market_owner_toll_rate = 1.25
+	ai_market_owner_desire = {
+		value = stewardship
+		if = { limit = { exists = scope:trade_market } add = 10 }
+	}
+}

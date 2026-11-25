@@ -1,6 +1,6 @@
 # CK3 1.21 first pass
 
-This branch starts from pharaox's `adapt/ck3-1.20.1.1` at `9f61d918`. Its first pass covers the 1.21 province-to-district links, district back-links, the regular and owned trade-post district iterators, and the receiver and argument types for `add_building`. It also reports a CK3 `trigger_else_if` chain that ends or is interrupted before a sibling `trigger_else`. The inherited faith and rite loaders support PoD's hunter faiths. The district and building validators also cover holding definitions, building needs and market modifiers, district assets and construction callbacks, and dated province history. They resolve item references across the game and ordered parents.
+This branch starts from pharaox's `adapt/ck3-1.20.1.1` at `9f61d918`. Its first pass covers the 1.21 province-to-district links, district back-links, the regular and owned trade-post district iterators, and the receiver and argument types for `add_building`. It also reports a CK3 `trigger_else_if` chain that ends or is interrupted before a sibling `trigger_else`. The inherited faith and rite loaders support PoD's hunter faiths. The district and building validators also cover holding definitions, building needs and market modifiers, district assets and construction callbacks, and dated province history. They resolve item references across the game and ordered parents. The trade pass loads goods, categories, county production potential, toll levels, trader tasks, goods graphics, roads and road modifiers. It checks trade and road scope transitions, iterators, triggers, effects and modifier use areas. Road definitions are checked against province IDs. Binary road geometry is outside the script validator.
 
 ## Build and run
 
@@ -38,7 +38,7 @@ Caching is opt-in. The baseline key includes the binary and rules, game version,
 
 ```powershell
 py -3 -B workspace/tests/first_pass.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
-py -3 -B workspace/tests/port_passes.py --pass districts --workspace .. --game $game --tiger target/release/ck3-tiger.exe
+py -3 -B workspace/tests/port_passes.py --pass districts --pass trade --workspace .. --game $game --tiger target/release/ck3-tiger.exe
 py -3 -B workspace/tests/test_runner.py
 cargo test --locked -p tiger-lib
 ```

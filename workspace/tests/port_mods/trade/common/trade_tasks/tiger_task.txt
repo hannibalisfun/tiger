@@ -1,0 +1,10 @@
+﻿tiger_trader_task = {
+	aptitude = { value = stewardship add = diplomacy divide = 2 }
+	aptitude_level_breakpoints = { 5 8 13 21 }
+	icon = "gfx/interface/icons/trade/acumen.dds"
+	animation = reading
+	scaling_modifiers = {
+		good = { trade_route_length_mult = 0.1 }
+		excellent = { stewardship = 1 } # personal stat on a trade route
+	}
+}

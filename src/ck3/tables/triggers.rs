@@ -70,6 +70,14 @@ pub fn scope_trigger(name: &Token, data: &Everything) -> Option<(Scopes, Trigger
     std::option::Option::None
 }
 
+const MODIFIER_DURATION_FIELDS: &[(&str, Trigger)] = &[
+    ("modifier", Item(Item::Modifier)),
+    ("*days", CompareValue),
+    ("*weeks", CompareValue),
+    ("*months", CompareValue),
+    ("*years", CompareValue),
+];
+
 static TRIGGER_MAP: LazyLock<TigerHashMap<&'static str, (Scopes, Trigger)>> = LazyLock::new(|| {
     let mut hash = TigerHashMap::default();
     for (from, s, trigger) in TRIGGER.iter().copied() {
@@ -91,6 +99,297 @@ static TRIGGER_MAP: LazyLock<TigerHashMap<&'static str, (Scopes, Trigger)>> = La
 ///    `num_of_relation_<relation>`
 /// A key ends with '(' if it is the version that takes a parenthesized argument in script.
 const TRIGGER: &[(Scopes, &str, Trigger)] = &[
+    // CK3 1.21 trade and roads
+    (Scopes::TradeRoute, "age_in_days", CompareValue),
+    (Scopes::TradeRoute, "age_in_months", CompareValue),
+    (Scopes::TradeRoute, "age_in_years", CompareValue),
+    (Scopes::TradeGoodType, "base_price", CompareValue),
+    (
+        Scopes::Character,
+        "can_create_commission_trade_route",
+        Block(&[
+            ("primary_good", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+            ("destination", Scope(Scopes::TradeMarket)),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "can_create_trade_monopoly",
+        Block(&[
+            (
+                "?trade_good_category",
+                ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory),
+            ),
+            ("?is_complete", Boolean),
+        ]),
+    ),
+    (Scopes::Character, "can_have_trade_posts", Boolean),
+    (Scopes::Character, "character_has_trade_monopoly", Boolean),
+    (Scopes::Confederation, "confederation_has_trade_monopoly", Boolean),
+    (Scopes::TradeRoute, "current_capacity", CompareValue),
+    (
+        Scopes::TradeGoodType,
+        "has_category",
+        ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory),
+    ),
+    (Scopes::Character, "has_commission_route_with", Scope(Scopes::Character)),
+    (
+        Scopes::TradeMarket,
+        "has_competitiveness_modifier_duration_remaining_for_character",
+        Block(&[
+            ("character", Scope(Scopes::Character)),
+            ("modifier", Item(Item::Modifier)),
+            ("*days", CompareValue),
+            ("*weeks", CompareValue),
+            ("*months", CompareValue),
+            ("*years", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "has_competitiveness_modifier_for_character",
+        Block(&[("character", Scope(Scopes::Character)), ("modifier", Item(Item::Modifier))]),
+    ),
+    (Scopes::TradeMarket, "has_complete_trade_monopoly", Boolean),
+    (Scopes::Character, "has_fewer_commission_routes_than", SetValue),
+    (
+        Scopes::LandedTitle,
+        "has_potential_for_trade_good",
+        ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType),
+    ),
+    (Scopes::Road, "has_road_modifier", Item(Item::Modifier)),
+    (
+        Scopes::Road,
+        "has_road_modifier_duration_remaining",
+        ItemOrBlock(Item::Modifier, MODIFIER_DURATION_FIELDS),
+    ),
+    (Scopes::TradeMarket, "has_toll_exception", Scope(Scopes::Character)),
+    (Scopes::TradeGoodCategory, "has_trade_good_category_xp_track", Boolean),
+    (
+        Scopes::TradeGoodType,
+        "has_trade_good_type",
+        ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType),
+    ),
+    (Scopes::TradeMarket, "has_trade_market_modifier", Item(Item::Modifier)),
+    (
+        Scopes::TradeMarket,
+        "has_trade_market_modifier_duration_remaining",
+        ItemOrBlock(Item::Modifier, MODIFIER_DURATION_FIELDS),
+    ),
+    (Scopes::TradeRoute, "has_trade_route_modifier", Item(Item::Modifier)),
+    (
+        Scopes::TradeRoute,
+        "has_trade_route_modifier_duration_remaining",
+        ItemOrBlock(Item::Modifier, MODIFIER_DURATION_FIELDS),
+    ),
+    (Scopes::TradeRoute, "has_trader", Boolean),
+    (Scopes::Character, "highest_traded_good_category_xp_level", CompareValue),
+    (
+        Scopes::TradeRoute,
+        "is_buying_trade_good_in_market",
+        Block(&[
+            ("trade_market", Scope(Scopes::TradeMarket)),
+            ("trade_good_type", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+        ]),
+    ),
+    (Scopes::TradeRoute, "is_commission_route", Boolean),
+    (Scopes::TradeMonopoly, "is_complete_monopoly", Boolean),
+    (Scopes::TradeRoute, "is_distribution_route", Boolean),
+    (Scopes::TradeMarket, "is_exempt_from_tolls", Scope(Scopes::Character)),
+    (Scopes::TradeRoute, "is_profit_route", Boolean),
+    (
+        Scopes::TradeRoute,
+        "is_selling_trade_good_in_market",
+        Block(&[
+            ("trade_market", Scope(Scopes::TradeMarket)),
+            ("trade_good_type", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+        ]),
+    ),
+    (
+        Scopes::TradeMonopoly,
+        "is_trade_monopoly_for_trade_good_category",
+        ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory),
+    ),
+    (Scopes::Character, "is_trader", Boolean),
+    (Scopes::TradeRoute, "last_tick_profit", CompareValue),
+    (Scopes::Character, "lowest_traded_good_category_xp_level", CompareValue),
+    (Scopes::TradeRoute, "max_capacity", CompareValue),
+    (Scopes::Character, "max_commission_routes", CompareValue),
+    (Scopes::TradeRoute, "max_trade_markets", CompareValue),
+    (Scopes::Character, "max_trade_routes", CompareValue),
+    (Scopes::TradeMonopoly, "monopoly_type", Choice(&["normal", "exploitative"])),
+    (Scopes::TradeRoute, "months_since_last_transaction", CompareValue),
+    (Scopes::Character, "num_commission_routes", CompareValue),
+    (Scopes::TradeRoute, "num_fulfilled_needs", CompareValue),
+    (Scopes::TradeRoute, "num_trade_markets", CompareValue),
+    (Scopes::Character, "num_trade_routes", CompareValue),
+    (
+        Scopes::Character,
+        "potential_trade_ally",
+        Block(&[
+            ("target", Scope(Scopes::Character)),
+            ("trade_market", Scope(Scopes::TradeMarket)),
+            ("?trade_good_type", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+        ]),
+    ),
+    (
+        Scopes::Character,
+        "potential_trade_rival",
+        Block(&[
+            ("target", Scope(Scopes::Character)),
+            ("trade_market", Scope(Scopes::TradeMarket)),
+            ("?trade_good_type", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+        ]),
+    ),
+    (
+        Scopes::Province,
+        "production_of_trade_good_category_type",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::Province,
+        "production_of_trade_good_type",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (Scopes::Road, "road_tier", CompareValue),
+    (Scopes::LandedTitle, "title_has_trade_monopoly", Boolean),
+    (Scopes::TollLevel, "toll_tier", CompareValue),
+    (
+        Scopes::TradeMarket,
+        "toll_tier_in_market",
+        BlockOrCompareValue(&[("target", Scope(Scopes::Character)), ("+value", CompareValue)]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "tolls_paid_in_market",
+        BlockOrCompareValue(&[
+            ("target", Scope(Scopes::Character)),
+            ("+value", CompareValue),
+            ("?toll_level", ScopeOrItem(Scopes::TollLevel, Item::TradeMarketTollLevel)),
+        ]),
+    ),
+    (
+        Scopes::TradeRoute,
+        "tolls_paid_on_route",
+        BlockOrCompareValue(&[
+            ("?toll_level", ScopeOrItem(Scopes::TollLevel, Item::TradeMarketTollLevel)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "trade_category_need",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "trade_category_surplus",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "trade_category_unfulfilled_need",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (Scopes::Character, "trade_competitiveness", CompareValue),
+    (
+        Scopes::LandedTitle,
+        "trade_good_category_level",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::LandedTitle,
+        "trade_good_category_xp",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "trade_good_exploitative_exports",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "trade_good_need",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "trade_good_surplus",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "trade_good_unfulfilled_need",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (Scopes::Character, "trade_income", CompareValue),
+    (
+        Scopes::TradeMarket,
+        "trade_market_need_of_trade_good_type",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "trade_market_production_of_trade_good_need_category",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "trade_market_production_of_trade_good_type",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (
+        Scopes::TradeMarket,
+        "trade_market_surplus_of_trade_good_type",
+        BlockOrCompareValue(&[
+            ("target", ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType)),
+            ("+value", CompareValue),
+        ]),
+    ),
+    (Scopes::Character, "trade_post_count", CompareValue),
+    (Scopes::Character, "trade_post_limit", CompareValue),
     (
         Scopes::Accolade,
         "accolade_attribute_level",
@@ -2645,6 +2944,99 @@ const TRIGGER_COMPLEX: &[(Scopes, &str, ArgumentValue, Scopes)] = {
     use crate::item::Item;
     use ArgumentValue::*;
     &[
+        // CK3 1.21 trade and roads
+        (
+            Scopes::Province,
+            "production_of_trade_good_category_type",
+            ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory),
+            Scopes::Value,
+        ),
+        (
+            Scopes::Province,
+            "production_of_trade_good_type",
+            ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType),
+            Scopes::Value,
+        ),
+        (Scopes::TradeMarket, "toll_tier_in_market", Scope(Scopes::Character), Scopes::Value),
+        (Scopes::TradeMarket, "tolls_paid_in_market", Scope(Scopes::Character), Scopes::Value),
+        (
+            Scopes::TradeMarket,
+            "trade_category_need",
+            ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory),
+            Scopes::Value,
+        ),
+        (
+            Scopes::TradeMarket,
+            "trade_category_surplus",
+            ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory),
+            Scopes::Value,
+        ),
+        (
+            Scopes::TradeMarket,
+            "trade_category_unfulfilled_need",
+            ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory),
+            Scopes::Value,
+        ),
+        (
+            Scopes::LandedTitle,
+            "trade_good_category_level",
+            ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory),
+            Scopes::Value,
+        ),
+        (
+            Scopes::LandedTitle,
+            "trade_good_category_xp",
+            ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory),
+            Scopes::Value,
+        ),
+        (
+            Scopes::TradeMarket,
+            "trade_good_exploitative_exports",
+            ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType),
+            Scopes::Value,
+        ),
+        (
+            Scopes::TradeMarket,
+            "trade_good_need",
+            ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType),
+            Scopes::Value,
+        ),
+        (
+            Scopes::TradeMarket,
+            "trade_good_surplus",
+            ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType),
+            Scopes::Value,
+        ),
+        (
+            Scopes::TradeMarket,
+            "trade_good_unfulfilled_need",
+            ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType),
+            Scopes::Value,
+        ),
+        (
+            Scopes::TradeMarket,
+            "trade_market_need_of_trade_good_type",
+            ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType),
+            Scopes::Value,
+        ),
+        (
+            Scopes::TradeMarket,
+            "trade_market_production_of_trade_good_need_category",
+            ScopeOrItem(Scopes::TradeGoodCategory, Item::TradeGoodCategory),
+            Scopes::Value,
+        ),
+        (
+            Scopes::TradeMarket,
+            "trade_market_production_of_trade_good_type",
+            ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType),
+            Scopes::Value,
+        ),
+        (
+            Scopes::TradeMarket,
+            "trade_market_surplus_of_trade_good_type",
+            ScopeOrItem(Scopes::TradeGoodType, Item::TradeGoodType),
+            Scopes::Value,
+        ),
         (Scopes::Character, "ai_values_divergence", Scope(Scopes::Character), Scopes::Value),
         (
             Scopes::Character,

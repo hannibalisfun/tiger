@@ -21,6 +21,22 @@ static SCOPE_TO_SCOPE_MAP: LazyLock<TigerHashMap<&'static str, (Scopes, Scopes)>
 /// See `event_targets.log` from the game data dumps
 /// These are scope transitions that can be chained like `root.joined_faction.faction_leader`
 const SCOPE_TO_SCOPE: &[(Scopes, &str, Scopes)] = &[
+    // CK3 1.21 trade and roads
+    (Scopes::Character, "assigned_trade_route", Scopes::TradeRoute),
+    (Scopes::TradeMonopoly, "character_owner", Scopes::Character),
+    (Scopes::TradeRoute, "commissioner", Scopes::Character),
+    (Scopes::TradeMonopoly, "confederation_owner", Scopes::Confederation),
+    (Scopes::TradeMonopoly, "monopoly_trade_good_category", Scopes::TradeGoodCategory),
+    (Scopes::TradeMonopoly, "monopoly_trade_market", Scopes::TradeMarket),
+    (Scopes::TradeRoute, "primary_trade_good", Scopes::TradeGoodType),
+    (Scopes::TradeMonopoly, "title_owner", Scopes::LandedTitle),
+    (Scopes::TradeMarket, "toll_level", Scopes::TollLevel),
+    (Scopes::TradeGoodType, "trade_good_need_category", Scopes::TradeGoodCategory),
+    (Scopes::LandedTitle, "trade_market", Scopes::TradeMarket),
+    (Scopes::TradeMarket, "trade_market_owner", Scopes::LandedTitle),
+    (Scopes::Province, "trade_post_owner", Scopes::Character),
+    (Scopes::TradeRoute, "trade_route_owner", Scopes::Character),
+    (Scopes::TradeRoute, "trader", Scopes::Character),
     (Scopes::Accolade, "acclaimed_knight", Scopes::Character),
     (Scopes::Character, "accolade", Scopes::Accolade),
     (Scopes::Accolade, "accolade_owner", Scopes::Character),
@@ -346,6 +362,14 @@ const SCOPE_PREFIX: &[(Scopes, &str, Scopes, ArgumentValue)] = {
     use crate::item::Item;
     use crate::scopes::ArgumentValue::*;
     &[
+        (Scopes::None, "toll_level", Scopes::TollLevel, Item(Item::TradeMarketTollLevel)),
+        (
+            Scopes::None,
+            "trade_good_category",
+            Scopes::TradeGoodCategory,
+            Item(Item::TradeGoodCategory),
+        ),
+        (Scopes::None, "trade_good_type", Scopes::TradeGoodType, Item(Item::TradeGoodType)),
         (Scopes::None, "accolade_type", Scopes::AccoladeType, Item(Item::AccoladeType)),
         (Scopes::Activity, "activity_doctrine", Scopes::Doctrine, Index),
         (Scopes::Activity, "activity_tenet", Scopes::Tenet, Index),
@@ -509,7 +533,7 @@ const SCOPE_PREFIX: &[(Scopes, &str, Scopes, ArgumentValue)] = {
             Item(Item::Situation),
         ),
         (Scopes::None, "trait", Scopes::Trait, Item(Item::Trait)),
-        (Scopes::all(), "var", Scopes::all(), UncheckedValue),
+        (crate::ck3::scopes::VARIABLE_STORAGE, "var", Scopes::all(), UncheckedValue),
         (Scopes::None, "vassal_contract", Scopes::VassalContract, Item(Item::SubjectContract)),
         (
             Scopes::Character,

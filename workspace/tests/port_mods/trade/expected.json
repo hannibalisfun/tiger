@@ -1,0 +1,18 @@
+[
+  {"path":"common/trade/trade_good_types/tiger_goods.txt","marker":"tiger_bad_price","key":"validation","contains":"expected number"},
+  {"path":"common/trade/trade_good_types/tiger_goods.txt","marker":"short origin","key":"validation","contains":"expected 2 integers"},
+  {"path":"common/trade/trade_good_categories/zz_tiger_categories.txt","marker":"duplicate need membership","key":"validation","contains":"already belongs to need category trade_category_cereals"},
+  {"path":"common/trade/trade_good_categories/zz_tiger_categories.txt","marker":"tiger_trade_unknown","key":"missing-item","contains":"tiger_trade_unknown"},
+  {"path":"common/trade/county_potential_trade_goods/tiger_counties.txt","marker":"wrong title tier","key":"title-tier","contains":"expected a county title"},
+  {"path":"common/trade/county_potential_trade_goods/tiger_counties.txt","marker":"c_tiger_trade_unknown_county","key":"missing-item","contains":"c_tiger_trade_unknown_county"},
+  {"path":"common/trade/county_potential_trade_goods/tiger_counties.txt","marker":"tiger_trade_unregistered_good","key":"missing-item","contains":"tiger_trade_unregistered_good"},
+  {"path":"common/trade/trade_market_toll_levels/tiger_tolls.txt","marker":"1.25","key":"range","contains":"should be between"},
+  {"path":"common/trade_tasks/tiger_task.txt","marker":"personal stat on a trade route","key":"modifiers","contains":"expected trade route"},
+  {"path":"common/trade_goods_graphics/tiger_graphics.txt","marker":"tiger_graphical_unknown_good","key":"missing-item","contains":"tiger_graphical_unknown_good"},
+  {"path":"common/trade_goods_graphics/tiger_graphics.txt","marker":"tiger_unknown_goods_mesh","key":"missing-item","contains":"tiger_unknown_goods_mesh"},
+  {"path":"common/roads/road_types/tiger_roads.txt","marker":"unsupported road tier","key":"range","contains":"should be between"},
+  {"path":"common/roads/road_types/tiger_roads.txt","marker":"unsupported road spline","key":"range","contains":"should be between"},
+  {"path":"common/roads/road_types/tiger_roads.txt","marker":"no end point","key":"validation","contains":"at least two provinces"},
+  {"path":"common/roads/road_modifiers/tiger_road_modifiers.txt","marker":"tiger_unknown_road","key":"missing-item","contains":"tiger_unknown_road"},
+  {"path":"common/roads/road_modifiers/tiger_road_modifiers.txt","marker":"personal stat on a road","key":"modifiers","contains":"expected road"}
+]

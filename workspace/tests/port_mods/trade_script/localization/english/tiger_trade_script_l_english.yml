@@ -1,0 +1,5 @@
+﻿l_english:
+ tiger_trade_script_decision: "Test trade and roads"
+ tiger_trade_script_decision_desc: "Check trade routes, markets, goods, tolls, roads and monopolies."
+ tiger_trade_script_decision_tooltip: "Check the validation cases."
+ tiger_trade_script_decision_confirm: "Run the test"

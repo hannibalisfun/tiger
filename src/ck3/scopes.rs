@@ -1,6 +1,49 @@
 use crate::everything::Everything;
 use crate::scopes::Scopes;
 
+/// Object scopes marked `Stores Variables: yes` in the CK3 1.21 engine export.
+pub const VARIABLE_STORAGE: Scopes = Scopes::Character
+    .union(Scopes::LandedTitle)
+    .union(Scopes::Building)
+    .union(Scopes::District)
+    .union(Scopes::Activity)
+    .union(Scopes::Secret)
+    .union(Scopes::Province)
+    .union(Scopes::Scheme)
+    .union(Scopes::Combat)
+    .union(Scopes::CombatSide)
+    .union(Scopes::Faith)
+    .union(Scopes::GreatHolyWar)
+    .union(Scopes::Religion)
+    .union(Scopes::War)
+    .union(Scopes::StoryCycle)
+    .union(Scopes::Dynasty)
+    .union(Scopes::DynastyHouse)
+    .union(Scopes::HouseRelation)
+    .union(Scopes::Faction)
+    .union(Scopes::Culture)
+    .union(Scopes::Army)
+    .union(Scopes::Artifact)
+    .union(Scopes::Inspiration)
+    .union(Scopes::Struggle)
+    .union(Scopes::CharacterMemory)
+    .union(Scopes::TravelPlan)
+    .union(Scopes::Accolade)
+    .union(Scopes::Rite)
+    .union(Scopes::TaxSlot)
+    .union(Scopes::Epidemic)
+    .union(Scopes::Legend)
+    .union(Scopes::Domicile)
+    .union(Scopes::TaskContract)
+    .union(Scopes::Situation)
+    .union(Scopes::SituationParticipantGroup)
+    .union(Scopes::SituationSubRegion)
+    .union(Scopes::Confederation)
+    .union(Scopes::GreatProject)
+    .union(Scopes::TradeMarket)
+    .union(Scopes::TradeRoute)
+    .union(Scopes::TradeMonopoly);
+
 // LAST UPDATED CK3 VERSION 1.16.0
 pub fn needs_prefix(arg: &str, data: &Everything, scopes: Scopes) -> Option<&'static str> {
     use crate::item::Item;
@@ -81,6 +124,15 @@ pub fn needs_prefix(arg: &str, data: &Everything, scopes: Scopes) -> Option<&'st
     }
     if scopes == Scopes::Struggle && data.item_exists(Item::Struggle, arg) {
         return Some("struggle");
+    }
+    if scopes == Scopes::TollLevel && data.item_exists(Item::TradeMarketTollLevel, arg) {
+        return Some("toll_level");
+    }
+    if scopes == Scopes::TradeGoodCategory && data.item_exists(Item::TradeGoodCategory, arg) {
+        return Some("trade_good_category");
+    }
+    if scopes == Scopes::TradeGoodType && data.item_exists(Item::TradeGoodType, arg) {
+        return Some("trade_good_type");
     }
     if scopes == Scopes::Tenet && data.item_exists(Item::Tenet, arg) {
         return Some("tenet");

@@ -1,0 +1,10 @@
+﻿tiger_trade_good = {
+	base_price = 0.025
+	origin = { 2100 3000 }
+	is_basic = yes
+	category = food
+}
+tiger_trade_bad = {
+	base_price = tiger_bad_price
+	origin = { 2100 } # short origin
+}

@@ -352,6 +352,31 @@ pub fn precheck_iterator_fields(
             }
         }
     }
+    // Trade filters evaluate on the caller before the iterator switches to each trader.
+    #[cfg(feature = "ck3")]
+    if Game::is_ck3()
+        && matches!(
+            name,
+            "potential_trade_ally_in_market"
+                | "potential_trade_rival_in_market"
+                | "potential_trade_ally_on_routes"
+                | "potential_trade_rival_on_routes"
+        )
+    {
+        let market_iter = name.ends_with("_in_market");
+        if market_iter {
+            if let Some(target) = block.get_field_value("target") {
+                validate_target_ok_this(target, data, sc, Scopes::Character);
+            }
+        } else if let Some(market) = block.get_field_value("trade_market") {
+            validate_target_ok_this(market, data, sc, Scopes::TradeMarket);
+        }
+        if let Some(good) = block.get_field_value("trade_good_type")
+            && !data.item_exists(Item::TradeGoodType, good.as_str())
+        {
+            validate_target_ok_this(good, data, sc, Scopes::TradeGoodType);
+        }
+    }
     #[cfg(feature = "ck3")]
     if Game::is_ck3() && name == "succession_appointment_investors" {
         if let Some(candidate) = block.get_field_value("candidate") {
@@ -532,6 +557,20 @@ pub fn validate_inside_iterator(
 
     #[cfg(feature = "ck3")]
     if Game::is_ck3() {
+        if matches!(
+            name.as_str(),
+            "potential_trade_ally_in_market" | "potential_trade_rival_in_market"
+        ) {
+            vd.req_field("target");
+            vd.field_value("target");
+            vd.field_value("trade_good_type");
+        } else if matches!(
+            name.as_str(),
+            "potential_trade_ally_on_routes" | "potential_trade_rival_on_routes"
+        ) {
+            vd.field_value("trade_market");
+            vd.field_value("trade_good_type");
+        }
         if name == "in_de_facto_hierarchy" || name == "in_de_jure_hierarchy" {
             vd.field_trigger("filter", tooltipped, sc);
             vd.field_trigger("continue", tooltipped, sc);
@@ -749,10 +788,13 @@ pub fn validate_inside_iterator(
         if name == "desired_tenet" || name == "undesired_tenet" {
             vd.field_integer("selection_count");
             vd.field_numeric("threshold");
+        } else if name == "top_trade_good_in_range" {
+            vd.field_integer("selection_count");
         } else {
-            let only_for = || format!("`{listtype}_desired_tenet` or `{listtype}_undesired_tenet`");
-            vd.ban_field("selection_count", only_for);
-            vd.ban_field("threshold", only_for);
+            vd.ban_field("selection_count", || format!("`{listtype}_desired_tenet`, `{listtype}_undesired_tenet` or `{listtype}_top_trade_good_in_range`"));
+            vd.ban_field("threshold", || {
+                format!("`{listtype}_desired_tenet` or `{listtype}_undesired_tenet`")
+            });
         }
 
         if name == "desired_tenet" {

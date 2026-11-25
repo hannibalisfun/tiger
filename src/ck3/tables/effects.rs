@@ -55,6 +55,68 @@ static SCOPE_EFFECT_MAP: LazyLock<TigerHashMap<&'static str, (Scopes, Effect)>> 
 // LAST UPDATED CK3 VERSION 1.20.1
 // See `effects.log` from the game data dumps
 const SCOPE_EFFECT: &[(Scopes, &str, Effect)] = &[
+    // CK3 1.21 trade and roads
+    (
+        Scopes::TradeMarket,
+        "add_competitiveness_modifier_for_character",
+        Vb(validate_trade_competitiveness_modifier),
+    ),
+    (Scopes::TradeMarket, "add_price_modifier_for_character", Vb(validate_trade_price_modifier)),
+    (Scopes::Road, "add_road_modifier", Vbv(validate_add_modifier)),
+    (Scopes::TradeMarket, "add_toll_exception", Vb(validate_trade_toll_exception)),
+    (
+        Scopes::LandedTitle,
+        "add_trade_good_category_xp",
+        TargetValue("target", Scopes::TradeGoodCategory, "value"),
+    ),
+    (
+        Scopes::Character.union(Scopes::TradeMarket).union(Scopes::TradeRoute),
+        "add_trade_good_price_modifier",
+        Vb(validate_trade_price_modifier),
+    ),
+    (Scopes::TradeMarket, "add_trade_market_modifier", Vbv(validate_add_modifier)),
+    (Scopes::TradeRoute, "add_trade_route_modifier", Vbv(validate_add_modifier)),
+    (Scopes::TradeRoute, "assign_trader", Vb(validate_assign_trader)),
+    (
+        Scopes::Character,
+        "create_commission_trade_route",
+        Vb(validate_create_commission_trade_route),
+    ),
+    (Scopes::None, "create_trade_monopoly", Vb(validate_create_trade_monopoly)),
+    (Scopes::TradeMonopoly, "destroy_trade_monopoly", Yes),
+    (Scopes::TradeRoute, "destroy_trade_route", Vbv(validate_destroy_trade_route)),
+    (Scopes::TradeMarket, "increase_toll_level", Yes),
+    (Scopes::TradeMarket, "lower_toll_level", Yes),
+    (Scopes::TradeMarket, "open_trade_market_trade_posts", Yes),
+    (
+        Scopes::TradeMarket,
+        "remove_all_competitiveness_modifier_instances_for_character",
+        Vb(validate_trade_competitiveness_modifier),
+    ),
+    (Scopes::Road, "remove_all_road_modifier_instances", Item(Item::Modifier)),
+    (Scopes::TradeMarket, "remove_all_trade_market_modifier_instances", Item(Item::Modifier)),
+    (Scopes::TradeRoute, "remove_all_trade_route_modifier_instances", Item(Item::Modifier)),
+    (
+        Scopes::TradeMarket,
+        "remove_competitiveness_modifier_for_character",
+        Vb(validate_trade_competitiveness_modifier),
+    ),
+    (Scopes::Road, "remove_road_modifier", Item(Item::Modifier)),
+    (Scopes::TradeMarket, "remove_toll_exception", Scope(Scopes::Character)),
+    (Scopes::TradeMarket, "remove_trade_market_modifier", Item(Item::Modifier)),
+    (Scopes::TradeRoute, "remove_trade_route_modifier", Item(Item::Modifier)),
+    (Scopes::Road, "set_road_tier", ScriptValue),
+    (
+        Scopes::TradeMarket,
+        "set_toll_level",
+        ScopeOrItem(Scopes::TollLevel, Item::TradeMarketTollLevel),
+    ),
+    (
+        Scopes::LandedTitle,
+        "set_trade_good_category_xp",
+        TargetValue("target", Scopes::TradeGoodCategory, "value"),
+    ),
+    (Scopes::TradeMonopoly, "set_trade_monopoly_name", Desc),
     (Scopes::TravelPlan, "abort_travel_plan", Boolean),
     (Scopes::Character, "accept_activity_invite", Scope(Scopes::Activity)),
     (Scopes::Character, "accept_activity_invite_without_travel", Scope(Scopes::Activity)),

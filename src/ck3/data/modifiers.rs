@@ -116,6 +116,17 @@ fn get_modif_kinds(name: &str) -> ModifKinds {
     if name.contains("travel_plan_modifier") {
         return ModifKinds::TravelPlan;
     }
+    if name.contains("road_modifier") {
+        return ModifKinds::Road;
+    }
+    if name.contains("trade_route_modifier") {
+        return ModifKinds::TradeRoute;
+    }
+    if name.contains("trade_market_modifier")
+        || name == "add_competitiveness_modifier_for_character"
+    {
+        return ModifKinds::TradeMarket;
+    }
 
     ModifKinds::empty()
 }

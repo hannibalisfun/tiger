@@ -152,6 +152,13 @@ bitflags! {
         #[cfg(feature = "ck3")] const BuildingType = 1<<81;
         #[cfg(feature = "ck3")] const DistrictType = 1<<82;
         #[cfg(feature = "ck3")] const Building = 1<<83;
+        #[cfg(feature = "ck3")] const TradeGoodType = 1<<84;
+        #[cfg(feature = "ck3")] const TradeGoodCategory = 1<<85;
+        #[cfg(feature = "ck3")] const TradeMarket = 1<<86;
+        #[cfg(feature = "ck3")] const TradeRoute = 1<<87;
+        #[cfg(feature = "ck3")] const TradeMonopoly = 1<<88;
+        #[cfg(feature = "ck3")] const Road = 1<<89;
+        #[cfg(feature = "ck3")] const TollLevel = 1<<90;
 
         #[cfg(feature = "vic3")] const Battle = 1<<16;
         #[cfg(feature = "vic3")] const BattleSide = 1<<17;

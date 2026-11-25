@@ -1,0 +1,23 @@
+﻿trade_category_cereals = { # Replace the vanilla membership. Grain is free for another need category.
+	need = yes
+	trade_goods = { tiger_trade_good }
+}
+tiger_trade_need = {
+	need = yes
+	trade_good_grain
+	color = { 0.8 0.6 0.2 1 }
+	per_level_interval = { stewardship = 1 }
+	milestone_interval = { every_level = 5 trade_route_length_mult = 0.1 }
+	milestone_interval = { every_level = 10 trade_route_length_mult = 0.2 }
+	levels = { beginner = { } expert = { character_modifier = { stewardship = 1 } } }
+}
+tiger_trade_overlap = {
+	need = yes
+	trade_goods = {
+		tiger_trade_good # duplicate need membership
+		tiger_trade_unknown
+	}
+}
+tiger_trade_collection = {
+	trade_goods = { tiger_trade_good trade_good_grain } # Non-need categories can overlap.
+}

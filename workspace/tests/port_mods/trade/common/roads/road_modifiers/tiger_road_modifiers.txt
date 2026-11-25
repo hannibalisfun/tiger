@@ -1,0 +1,11 @@
+﻿tiger_regional_roads = {
+	type = { tiger_kempten_road tiger_unknown_road }
+	modifier = { road_construction_speed = 0.1 }
+	tier_0 = { province_modifier = { levy_size = 0.05 } }
+	tier_5 = {
+		trade_route_modifier = { trade_route_length_mult = 0.1 }
+		travel_modifier = { travel_speed_mult = 0.1 }
+		character_modifier = { movement_speed = 0.1 }
+		modifier = { stewardship = 1 } # personal stat on a road
+	}
+}

@@ -40,6 +40,146 @@ pub fn validate_random_district_building(
     vd.field_item_or_target("district", sc, Item::DistrictType, Scopes::District);
 }
 
+pub fn validate_trade_price_modifier(
+    key: &Token,
+    _block: &Block,
+    _data: &Everything,
+    sc: &mut ScopeContext,
+    mut vd: Validator,
+    _tooltipped: Tooltipped,
+) {
+    if key.lowercase_is("add_price_modifier_for_character") {
+        vd.req_field("character");
+        vd.field_target("character", sc, Scopes::Character);
+    }
+    vd.req_field("type");
+    vd.field_choice("type", &["buy_add", "buy_mult", "sell_add", "sell_mult"]);
+    vd.req_field("trade_good_type");
+    vd.field_item_or_target("trade_good_type", sc, Item::TradeGoodType, Scopes::TradeGoodType);
+    vd.req_field("value");
+    vd.field_script_value("value", sc);
+    validate_optional_duration(&mut vd, sc);
+}
+
+pub fn validate_trade_competitiveness_modifier(
+    key: &Token,
+    block: &Block,
+    data: &Everything,
+    sc: &mut ScopeContext,
+    mut vd: Validator,
+    _tooltipped: Tooltipped,
+) {
+    vd.req_field("character");
+    vd.field_target("character", sc, Scopes::Character);
+    vd.req_field("modifier");
+    if let Some(modifier) = vd.field_value("modifier") {
+        data.verify_exists(Item::Modifier, modifier);
+        if key.lowercase_is("add_competitiveness_modifier_for_character") {
+            data.database.validate_call(Item::Modifier, modifier, block, data, sc);
+            data.database.validate_property_use(Item::Modifier, modifier, data, key, key.as_str());
+        }
+    }
+    if key.lowercase_is("add_competitiveness_modifier_for_character") {
+        vd.field_validated_sc("desc", sc, validate_desc);
+        validate_optional_duration(&mut vd, sc);
+    }
+}
+
+pub fn validate_trade_toll_exception(
+    _key: &Token,
+    _block: &Block,
+    _data: &Everything,
+    sc: &mut ScopeContext,
+    mut vd: Validator,
+    _tooltipped: Tooltipped,
+) {
+    vd.req_field("target");
+    vd.field_target("target", sc, Scopes::Character);
+    vd.req_field("toll_level");
+    vd.field_item_or_target("toll_level", sc, Item::TradeMarketTollLevel, Scopes::TollLevel);
+    validate_optional_duration(&mut vd, sc);
+}
+
+pub fn validate_create_trade_monopoly(
+    _key: &Token,
+    _block: &Block,
+    _data: &Everything,
+    sc: &mut ScopeContext,
+    mut vd: Validator,
+    _tooltipped: Tooltipped,
+) {
+    vd.req_field_one_of(&["owning_character", "owning_confederation", "owning_title"]);
+    vd.field_target("owning_character", sc, Scopes::Character);
+    vd.field_target("owning_confederation", sc, Scopes::Confederation);
+    vd.field_target("owning_title", sc, Scopes::LandedTitle);
+    vd.req_field("trade_market");
+    vd.field_target("trade_market", sc, Scopes::TradeMarket);
+    vd.field_item_or_target(
+        "trade_good_category",
+        sc,
+        Item::TradeGoodCategory,
+        Scopes::TradeGoodCategory,
+    );
+    vd.field_choice("type", &["normal", "exploitative"]);
+    vd.field_target("is_complete", sc, Scopes::Bool);
+}
+
+pub fn validate_create_commission_trade_route(
+    _key: &Token,
+    block: &Block,
+    _data: &Everything,
+    sc: &mut ScopeContext,
+    mut vd: Validator,
+    _tooltipped: Tooltipped,
+) {
+    vd.req_field("commissioner");
+    vd.field_target("commissioner", sc, Scopes::Character);
+    vd.req_field("primary_good");
+    vd.field_item_or_target("primary_good", sc, Item::TradeGoodType, Scopes::TradeGoodType);
+    vd.req_field("destination");
+    vd.field_target("destination", sc, Scopes::TradeMarket);
+    validate_mandatory_duration(block, &mut vd, sc);
+    if let Some(name) = vd.field_identifier("save_scope_as", "scope name") {
+        sc.define_name_token(name.as_str(), Scopes::TradeRoute, name, Temporary::No);
+    }
+}
+
+pub fn validate_assign_trader(
+    _key: &Token,
+    _block: &Block,
+    _data: &Everything,
+    sc: &mut ScopeContext,
+    mut vd: Validator,
+    _tooltipped: Tooltipped,
+) {
+    vd.req_field("character");
+    vd.field_target("character", sc, Scopes::Character);
+    vd.req_field("task");
+    vd.field_item("task", Item::TradeTask);
+}
+
+pub fn validate_destroy_trade_route(
+    _key: &Token,
+    bv: &BV,
+    data: &Everything,
+    sc: &mut ScopeContext,
+    _tooltipped: Tooltipped,
+) {
+    match bv {
+        BV::Block(block) => {
+            let mut vd = Validator::new(block, data);
+            vd.field_target("destroyer", sc, Scopes::Character);
+        }
+        BV::Value(token) if !token.is("yes") => {
+            err(ErrorKey::Validation)
+                .msg("expected yes or a block with destroyer")
+                .loc(token)
+                .push();
+        }
+        BV::Value(_) => (),
+    }
+}
+
 pub fn validate_add_activity_log_entry(
     key: &Token,
     block: &Block,

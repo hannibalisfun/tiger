@@ -1,0 +1,10 @@
+﻿tiger_grapes = {
+	trade_good_type = tiger_trade_good
+	minimum_produced = minimum_produced_default
+	graphical_culture = { mena_building_gfx }
+	asset = "resource_vineyard_mesh"
+}
+tiger_missing_goods_graphics = {
+	trade_good_type = tiger_graphical_unknown_good
+	asset = tiger_unknown_goods_mesh
+}

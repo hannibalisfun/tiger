@@ -1,0 +1,10 @@
+﻿tiger_kempten_road = {
+	tier = 0
+	spline_asset_id = 0
+	provinces = { 2092 2097 }
+}
+tiger_invalid_road = {
+	tier = 6 # unsupported road tier
+	spline_asset_id = 2 # unsupported road spline
+	provinces = { 2092 } # no end point
+}

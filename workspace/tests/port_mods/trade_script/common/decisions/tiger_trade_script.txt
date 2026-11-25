@@ -1,0 +1,72 @@
+﻿tiger_trade_script_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_castle_view.dds" }
+	decision_group_type = pod_splat
+	ai_check_interval = 0
+	is_valid = {
+		primary_title = {
+			trade_good_category_level = { target = trade_good_category:trade_category_food value >= 1 }
+			"trade_good_category_level(trade_good_category:trade_category_food)" >= 1
+		}
+		any_trade_route = {
+			has_trader = yes
+			any_road_on_route = { road_tier >= 2 }
+			any_trade_market_on_route = {
+				toll_level.toll_tier >= 1
+				any_trade_good_with_need = { has_category = trade_good_category:trade_category_food }
+				any_potential_trade_ally_in_market = { target = root is_adult = yes }
+				trade_good_need = { target = trade_good_type:trade_good_grain value > 0 }
+				trade_good_surplus = { target = root value > 0 } # wrong goods target
+				any_potential_trade_rival_in_market = { # missing market iterator target
+					is_adult = yes
+				}
+				any_trade_monopoly_for_market = {
+					is_complete_monopoly = no
+					monopoly_type = normal
+				}
+			}
+		}
+		any_top_trade_good_in_range = { selection_count = 2 base_price > 0 }
+		can_create_commission_trade_route = {
+			primary_good = trade_good_type:trade_good_wine
+			destination = primary_title.trade_market
+		}
+		road_tier >= 1 # road trigger on character
+	}
+	effect = {
+		create_commission_trade_route = {
+			primary_good = trade_good_wine
+			destination = primary_title.trade_market
+			commissioner = root
+			years = 1
+			save_scope_as = tiger_commission_route
+		}
+		scope:tiger_commission_route = {
+			assign_trader = { character = root task = manage_competition }
+			every_road_on_route = { set_road_tier = 2 }
+			every_trade_market_on_route = {
+				set_toll_level = toll_level:toll_level_high_tolls
+				add_toll_exception = { target = root toll_level = toll_level:toll_level_high_tolls months = 3 }
+				add_trade_good_price_modifier = { type = buy_add trade_good_type = trade_good_wine value = 1 }
+				add_price_modifier_for_character = {
+					character = root
+					type = invalid_tiger_trade_price
+					trade_good_type = trade_good_type:tiger_unknown_trade_good
+					value = 1
+				}
+				create_trade_monopoly = {
+					trade_market = prev.primary_trade_good # good used as market
+					owning_character = root
+					trade_good_category = trade_good_category:trade_category_food
+				}
+			}
+			assign_trader = { character = root task = tiger_unknown_trader_task }
+			destroy_trade_route = { destroyer = root }
+		}
+		create_trade_monopoly = { # competing monopoly owners
+			owning_character = root
+			owning_title = primary_title
+			trade_market = primary_title.trade_market
+			is_complete = yes
+		}
+	}
+}

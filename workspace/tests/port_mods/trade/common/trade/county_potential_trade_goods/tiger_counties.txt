@@ -1,0 +1,8 @@
+﻿tiger_trade_good = {
+	counties = {
+		c_kempten
+		k_england # wrong title tier
+		c_tiger_trade_unknown_county
+	}
+}
+tiger_trade_unregistered_good = { counties = { c_roma } }
