@@ -19,6 +19,8 @@ use crate::variables::Variables;
 
 #[derive(Debug, Default)]
 pub struct ScriptValues {
+    #[cfg(feature = "ck3")]
+    pub(crate) lookup: Option<crate::lookup::DefinitionHistory>,
     scope_overrides: TigerHashMap<&'static str, Scopes>,
     script_values: TigerHashMap<&'static str, ScriptValue>,
 }
@@ -42,6 +44,13 @@ impl ScriptValues {
                 self.script_values.get(key).map(|entry| &entry.key)
             }) {
                 PrefixShould::Insert(name) => {
+                    #[cfg(feature = "ck3")]
+                    crate::lookup::record(
+                        &mut self.lookup,
+                        Item::ScriptValue,
+                        &name,
+                        bv.get_block(),
+                    );
                     let scope_override = self.scope_overrides.get(name.as_str()).copied();
                     self.script_values
                         .insert(name.as_str(), ScriptValue::new(name, bv.clone(), scope_override));
@@ -99,12 +108,16 @@ impl ScriptValues {
 
     pub fn validate_call(&self, key: &Token, data: &Everything, sc: &mut ScopeContext) {
         if let Some(item) = self.script_values.get(key.as_str()) {
+            #[cfg(feature = "ck3")]
+            data.record_caller(Item::ScriptValue, key, Some(&item.key));
             item.validate_call(key, data, sc);
         }
     }
 
     pub fn validate_non_dynamic_call(&self, key: &Token, data: &Everything) {
         if let Some(item) = self.script_values.get(key.as_str()) {
+            #[cfg(feature = "ck3")]
+            data.record_caller(Item::ScriptValue, key, Some(&item.key));
             item.validate_non_dynamic_call(data);
         }
     }

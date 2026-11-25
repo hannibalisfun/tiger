@@ -30,6 +30,8 @@ pub type FlagValidator = fn(&Token, &Everything);
 /// The main database of game items.
 #[derive(Debug)]
 pub struct Db {
+    #[cfg(feature = "ck3")]
+    pub(crate) lookup: Option<crate::lookup::DefinitionHistory>,
     /// Items with full `DbEntries`, meaning a key and a block for each.
     /// The `Vec` is indexed with an `Item` discriminant.
     database: Vec<TigerHashMap<&'static str, DbEntry>>,
@@ -49,6 +51,8 @@ impl Default for Db {
             database: (0..Item::COUNT).map(|_| TigerHashMap::default()).collect(),
             flags: (0..Item::COUNT).map(|_| (TigerHashSet::default(), None)).collect(),
             anonymous: Vec::new(),
+            #[cfg(feature = "ck3")]
+            lookup: None,
             items_lc: (0..Item::COUNT).map(|_| TigerHashMap::default()).collect(),
         }
     }
@@ -166,6 +170,8 @@ impl Db {
 
     /// Actually add the item to the database, replacing any of the same name that were there before.
     fn add_inner2(&mut self, item: Item, key: Token, block: Block, kind: Box<dyn DbKind>) {
+        #[cfg(feature = "ck3")]
+        crate::lookup::record(&mut self.lookup, item, &key, Some(&block));
         self.items_lc[item as usize].insert(Lowercase::new(key.as_str()), key.as_str());
         self.database[item as usize].insert(key.as_str(), DbEntry { key, block, kind });
     }
@@ -176,6 +182,10 @@ impl Db {
     }
 
     pub fn add_flag(&mut self, item: Item, key: Token) {
+        #[cfg(feature = "ck3")]
+        if let Some(history) = &mut self.lookup {
+            history.contribution(item, &key);
+        }
         self.items_lc[item as usize].insert(Lowercase::new(key.as_str()), key.as_str());
         self.flags[item as usize].0.insert(key);
     }
@@ -291,6 +301,8 @@ impl Db {
         sc: &mut ScopeContext,
     ) {
         if let Some(entry) = self.database[item as usize].get(key.as_str()) {
+            #[cfg(feature = "ck3")]
+            data.record_caller(item, key, Some(&entry.key));
             entry.kind.validate_call(&entry.key, &entry.block, key, block, data, sc);
         }
     }
@@ -298,6 +310,8 @@ impl Db {
     #[allow(dead_code)]
     pub fn validate_use(&self, item: Item, key: &Token, block: &Block, data: &Everything) {
         if let Some(entry) = self.database[item as usize].get(key.as_str()) {
+            #[cfg(feature = "ck3")]
+            data.record_caller(item, key, Some(&entry.key));
             entry.kind.validate_use(&entry.key, &entry.block, data, key, block);
         }
     }
@@ -312,6 +326,8 @@ impl Db {
         caller: &str,
     ) {
         if let Some(entry) = self.database[item as usize].get(key.as_str()) {
+            #[cfg(feature = "ck3")]
+            data.record_caller(item, key, Some(&entry.key));
             entry.kind.validate_property_use(&entry.key, &entry.block, property, caller, data);
         }
     }

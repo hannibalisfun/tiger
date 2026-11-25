@@ -78,6 +78,10 @@ struct ValidateArgs {
     /// Output the reports in JSON format
     #[clap(long)]
     json: bool,
+    /// Look up a script identifier in this load order and print its definitions and callers as JSON.
+    #[cfg(feature = "ck3")]
+    #[clap(long, value_name = "SYMBOL", value_parser = clap::builder::NonEmptyStringValueParser::new())]
+    lookup: Option<String>,
     /// Consolidate certain repeated errors
     #[clap(long, short)]
     consolidate: bool,
@@ -244,14 +248,36 @@ pub fn run(
                 }
                 eprintln!("Using mod directory: {}", modpath.display());
 
-                everything = Everything::new(
-                    args.config.as_deref(),
-                    args.game.as_deref(),
-                    args.workshop.as_deref(),
-                    args.paradox.as_deref(),
-                    &modpath,
-                    modfile.replace_paths(),
-                )?;
+                let load = || {
+                    Everything::new(
+                        args.config.as_deref(),
+                        args.game.as_deref(),
+                        args.workshop.as_deref(),
+                        args.paradox.as_deref(),
+                        &modpath,
+                        modfile.replace_paths(),
+                    )
+                };
+                #[cfg(feature = "ck3")]
+                {
+                    everything = if let Some(query) = &args.lookup {
+                        Everything::new_with_lookup(
+                            args.config.as_deref(),
+                            args.game.as_deref(),
+                            args.workshop.as_deref(),
+                            args.paradox.as_deref(),
+                            &modpath,
+                            modfile.replace_paths(),
+                            query,
+                        )
+                    } else {
+                        load()
+                    }?;
+                }
+                #[cfg(not(feature = "ck3"))]
+                {
+                    everything = load()?;
+                }
             }
             #[cfg(any(feature = "vic3", feature = "eu5"))]
             {
@@ -276,6 +302,10 @@ pub fn run(
 
             let mut output = stdout();
 
+            #[cfg(feature = "ck3")]
+            if args.lookup.is_some() && emit_reports(&mut std::io::stderr(), false, false, false) {
+                bail!("Invalid config");
+            }
             if !args.json && emit_reports(&mut output, false, args.consolidate, false) {
                 bail!("Invalid config");
             }
@@ -295,6 +325,12 @@ pub fn run(
 
             everything.load_all();
             everything.validate_all();
+            #[cfg(feature = "ck3")]
+            if let Some(query) = &args.lookup {
+                println!("{}", everything.lookup_result(query));
+                forget(everything);
+                return Ok(());
+            }
             everything.check_rivers();
 
             #[cfg(feature = "ck3")]

@@ -25,6 +25,8 @@ use crate::variables::Variables;
 
 #[derive(Debug, Default)]
 pub struct Effects {
+    #[cfg(feature = "ck3")]
+    pub(crate) lookup: Option<crate::lookup::DefinitionHistory>,
     scope_overrides: TigerHashMap<&'static str, Scopes>,
     effects: TigerHashMap<&'static str, Effect>,
 }
@@ -39,6 +41,8 @@ impl Effects {
                 self.effects.get(key).map(|entry| &entry.key)
             })
         {
+            #[cfg(feature = "ck3")]
+            crate::lookup::record(&mut self.lookup, Item::ScriptedEffect, &name, Some(&block));
             let scope_override = self.scope_overrides.get(name.as_str()).copied();
             if block.source.is_some() {
                 MACRO_MAP.insert_or_get_loc(name.loc);

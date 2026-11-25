@@ -23,6 +23,8 @@ use crate::variables::Variables;
 
 #[derive(Debug, Default)]
 pub struct Triggers {
+    #[cfg(feature = "ck3")]
+    pub(crate) lookup: Option<crate::lookup::DefinitionHistory>,
     scope_overrides: TigerHashMap<&'static str, Scopes>,
     triggers: TigerHashMap<&'static str, Trigger>,
 }
@@ -37,6 +39,8 @@ impl Triggers {
                 self.triggers.get(key).map(|entry| &entry.key)
             })
         {
+            #[cfg(feature = "ck3")]
+            crate::lookup::record(&mut self.lookup, Item::ScriptedTrigger, &name, Some(&block));
             let scope_override = self
                 .scope_overrides
                 .get(name.as_str())

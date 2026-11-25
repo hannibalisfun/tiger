@@ -78,6 +78,10 @@ mod gui;
 mod helpers;
 mod item;
 mod launcher_settings;
+#[cfg(feature = "ck3")]
+mod lookup;
+#[cfg(feature = "ck3")]
+mod lookup_callers;
 mod lowercase;
 mod macros;
 #[cfg(any(feature = "vic3", feature = "eu5"))]

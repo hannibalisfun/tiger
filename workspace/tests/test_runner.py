@@ -48,6 +48,8 @@ class RunnerTests(unittest.TestCase):
 
             code, first = scan()
             self.assertEqual((code, first["metadata"]["cache"], first["reports"]), (0, "miss", []))
+            self.assertEqual([entry["label"] for entry in first["metadata"]["input_revisions"]],
+                             ["Clausewitz", "Jomini", "CK3", "parent-0", "MOD", "baseline"])
             relative = Path("common/on_action/test-trigger-chains.txt")
             (mod / relative).parent.mkdir(parents=True)
             shutil.copyfile(run.ROOT / "tests/files/mod1" / relative, mod / relative)

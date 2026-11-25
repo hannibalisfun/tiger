@@ -41,6 +41,22 @@ static LOG_ONCE: LazyLock<TigerHashSet<ErrorKey>> = LazyLock::new(|| {
 
 static ERRORS: LazyLock<Mutex<Errors>> = LazyLock::new(|| Mutex::new(Errors::default()));
 
+// Parsing a displaced file for lookup must not publish errors or its #tiger-ignore rules.
+#[cfg(feature = "ck3")]
+thread_local!(static INSPECTING_EXCLUDED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) });
+
+#[cfg(feature = "ck3")]
+pub(crate) fn inspect_excluded<T>(inspect: impl FnOnce() -> T) -> T {
+    struct Restore(bool);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            INSPECTING_EXCLUDED.set(self.0);
+        }
+    }
+    let _restore = Restore(INSPECTING_EXCLUDED.replace(true));
+    inspect()
+}
+
 #[allow(missing_debug_implementations)]
 #[derive(Default)]
 pub struct Errors<'a> {
@@ -317,6 +333,10 @@ pub fn add_loaded_dlc_root(label: String) {
 
 /// Store an error report to be emitted when [`emit_reports`] is called.
 pub fn log((report, pointers): LogReport) {
+    #[cfg(feature = "ck3")]
+    if INSPECTING_EXCLUDED.get() {
+        return;
+    }
     let pointers = pointed_msg_expansion(pointers);
     Errors::get_mut().push_report(report, pointers);
 }
@@ -387,6 +407,10 @@ pub fn register_ignore_filter<R>(pathname: &'static Path, lines: R, filter: Igno
 where
     R: RangeBounds<u32>,
 {
+    #[cfg(feature = "ck3")]
+    if INSPECTING_EXCLUDED.get() {
+        return;
+    }
     let start = lines.start_bound().cloned();
     let end = lines.end_bound().cloned();
     let entry = IgnoreEntry { start, end, filter };

@@ -148,6 +148,11 @@ impl Characters {
         self.characters.values().map(|ch| &ch.key).chain(self.duplicates.iter().map(|ch| &ch.key))
     }
 
+    /// The normal iterator also visits lower-priority history for validation.
+    pub(crate) fn primary_key(&self, key: &str) -> Option<&Token> {
+        self.characters.get(key).map(|character| &character.key)
+    }
+
     pub fn is_alive(&self, item: &Token, date: Date) -> bool {
         if let Some(item) = self.characters.get(item.as_str()) {
             item.is_alive(date)

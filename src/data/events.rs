@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::str::FromStr;
 use std::sync::Mutex;
 
 use rayon::prelude::*;
@@ -24,6 +23,8 @@ use crate::variables::Variables;
 #[derive(Debug, Default)]
 #[allow(clippy::struct_field_names)]
 pub struct Events {
+    #[cfg(feature = "ck3")]
+    pub(crate) lookup: Option<crate::lookup::DefinitionHistory>,
     events: TigerHashMap<(&'static str, u16), Event>,
     /// CK3 event definitions that another one overrode, with their `id_override_priority`
     overridden: TigerHashMap<(&'static str, u16), Vec<(i64, Token)>>,
@@ -32,11 +33,16 @@ pub struct Events {
     effects: TigerHashMap<(PathTableIndex, &'static str), Effect>,
 }
 
+pub(crate) fn event_id(key: &str) -> Option<(&str, u16)> {
+    let (namespace, number) = key.split_once('.')?;
+    Some((namespace, number.parse().ok()?))
+}
+
 impl Events {
     fn load_event(&mut self, key: Token, block: Block) {
-        if let Some((key_a, key_b)) = key.as_str().split_once('.')
-            && let Ok(id) = u16::from_str(key_b)
-        {
+        if let Some((key_a, id)) = event_id(key.as_str()) {
+            #[cfg(feature = "ck3")]
+            crate::lookup::record(&mut self.lookup, Item::Event, &key, None);
             if let Some(other) = self.get_event(key.as_str()) {
                 #[allow(clippy::redundant_else)]
                 if Game::is_vic3() {
@@ -82,6 +88,8 @@ impl Events {
     }
 
     fn load_scripted_trigger(&mut self, key: Token, block: Block) {
+        #[cfg(feature = "ck3")]
+        crate::lookup::record(&mut self.lookup, Item::ScriptedTrigger, &key, Some(&block));
         let index = (key.loc.idx, key.as_str());
         if let Some(other) = self.triggers.get(&index) {
             dup_error(&key, &other.key, "scripted trigger");
@@ -90,6 +98,8 @@ impl Events {
     }
 
     fn load_scripted_effect(&mut self, key: Token, block: Block) {
+        #[cfg(feature = "ck3")]
+        crate::lookup::record(&mut self.lookup, Item::ScriptedEffect, &key, Some(&block));
         let index = (key.loc.idx, key.as_str());
         if let Some(other) = self.effects.get(&index) {
             dup_error(&key, &other.key, "scripted effect");
@@ -122,12 +132,7 @@ impl Events {
     }
 
     fn get_event<'a>(&'a self, key: &'a str) -> Option<&'a Event> {
-        if let Some((namespace, id)) = key.split_once('.')
-            && let Ok(id) = u16::from_str(id)
-        {
-            return self.events.get(&(namespace, id));
-        }
-        None
+        self.events.get(&event_id(key)?)
     }
 
     pub fn check_scope(&self, token: &Token, sc: &mut ScopeContext, data: &Everything) {
@@ -145,17 +150,19 @@ impl Events {
     }
 
     pub fn exists(&self, key: &str) -> bool {
-        if let Some((namespace, id)) = key.split_once('.')
-            && let Ok(id) = u16::from_str(id)
-            && self.events.contains_key(&(namespace, id))
-        {
-            return true;
-        }
-        false
+        self.get_event(key).is_some()
     }
 
     pub fn iter_keys(&self) -> impl Iterator<Item = &Token> {
         self.events.values().map(|item| &item.key)
+    }
+
+    #[cfg(feature = "ck3")]
+    pub(crate) fn local_script_keys(&self) -> impl Iterator<Item = (Item, &Token)> {
+        self.effects
+            .values()
+            .map(|effect| (Item::ScriptedEffect, &effect.key))
+            .chain(self.triggers.values().map(|trigger| (Item::ScriptedTrigger, &trigger.key)))
     }
 
     pub fn validate(&self, data: &Everything) {
@@ -174,6 +181,8 @@ impl Events {
 
     pub fn validate_call(&self, key: &Token, data: &Everything, sc: &mut ScopeContext) {
         if let Some(event) = self.get_event(key.as_str()) {
+            #[cfg(feature = "ck3")]
+            data.record_caller(Item::Event, key, Some(&event.key));
             event.validate_call(data, sc);
         }
     }

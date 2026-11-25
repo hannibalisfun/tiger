@@ -373,6 +373,8 @@ pub fn validate_trigger_key_bv(
 
     // Scripted trigger?
     if let Some(trigger) = data.get_trigger(key) {
+        #[cfg(feature = "ck3")]
+        data.record_caller(Item::ScriptedTrigger, key, Some(&trigger.key));
         match bv {
             BV::Value(token) => {
                 if !(token.is("yes") || token.is("no") || token.is("YES") || token.is("NO")) {
@@ -817,7 +819,7 @@ fn match_trigger_bv(
         }
         Trigger::ScopeOrItem(s, i) => {
             if let Some(token) = bv.expect_value()
-                && !data.item_exists(*i, token.as_str())
+                && !data.resolve_item_token(*i, token)
             {
                 validate_target(token, data, sc, *s);
             }
@@ -1747,7 +1749,7 @@ fn validate_argument_internal(
         }
         #[cfg(any(feature = "ck3", feature = "vic3", feature = "eu5"))]
         ArgumentValue::ScopeOrItem(scope, item) => {
-            if !data.item_exists(item, arg.as_str()) {
+            if !data.resolve_item_token(item, arg) {
                 let stash = sc.stash_builder();
                 validate_target_ok_this(arg, data, sc, scope);
                 sc.unstash_builder(stash);
@@ -1759,7 +1761,7 @@ fn validate_argument_internal(
                 // TODO: verify that the track belongs to this trait
                 data.verify_exists(Item::Trait, &traitname);
                 data.verify_exists(Item::TraitTrack, &track);
-            } else if !data.item_exists(Item::Trait, arg.as_str()) {
+            } else if !data.resolve_item_token(Item::Trait, arg) {
                 let stash = sc.stash_builder();
                 validate_target(arg, data, sc, Scopes::Trait);
                 sc.unstash_builder(stash);

@@ -157,6 +157,8 @@ pub fn validate_effect_field(
 ) -> bool {
     let mut has_tooltip = false;
     if let Some(effect) = data.get_effect(key) {
+        #[cfg(feature = "ck3")]
+        data.record_caller(Item::ScriptedEffect, key, Some(&effect.key));
         match bv {
             BV::Value(token) => {
                 if !effect.macro_parms().is_empty() {
@@ -289,7 +291,7 @@ pub fn validate_effect_field(
             }
             Effect::ScopeOrItem(outscopes, itype) => {
                 if let Some(token) = bv.expect_value()
-                    && !data.item_exists(itype, token.as_str())
+                    && !data.resolve_item_token(itype, token)
                 {
                     validate_target(token, data, sc, outscopes);
                 }

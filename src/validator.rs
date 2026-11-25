@@ -594,7 +594,7 @@ impl<'a> Validator<'a> {
     ) -> bool {
         self.field_check(name, AllowInject::Yes, |_, bv| {
             if let Some(token) = bv.expect_value()
-                && !self.data.item_exists(itype, token.as_str())
+                && !self.data.resolve_item_token(itype, token)
             {
                 // TODO: pass max_severity here
                 validate_target(token, self.data, sc, outscopes);
@@ -615,7 +615,7 @@ impl<'a> Validator<'a> {
     ) -> bool {
         self.field_check(name, AllowInject::Yes, |_, bv| {
             if let Some(token) = bv.expect_value()
-                && !self.data.item_exists(itype, token.as_str())
+                && !self.data.resolve_item_token(itype, token)
             {
                 // TODO: pass max_severity here
                 validate_target_ok_this(token, self.data, sc, outscopes);

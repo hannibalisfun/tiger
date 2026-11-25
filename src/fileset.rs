@@ -276,6 +276,10 @@ pub struct Fileset {
     /// The CK3 and mod files in the order the game would load them.
     ordered_files: Vec<FileEntry>,
 
+    /// Files excluded by the normal file resolver, kept only for symbol lookup.
+    #[cfg(feature = "ck3")]
+    pub(crate) lookup_exclusions: Option<Vec<(FileEntry, &'static str)>>,
+
     /// Filename Tokens for the files in `ordered_files`.
     /// Used for [`Fileset::iter_keys()`].
     filename_tokens: Vec<Token>,
@@ -314,6 +318,8 @@ impl Fileset {
             config: None,
             files: Vec::new(),
             ordered_files: Vec::new(),
+            #[cfg(feature = "ck3")]
+            lookup_exclusions: None,
             filename_tokens: Vec::new(),
             filenames: TigerHashSet::default(),
             directories: RwLock::new(TigerHashSet::default()),
@@ -439,6 +445,13 @@ impl Fileset {
             }
             let inner_dir = inner_path.parent().unwrap_or_else(|| Path::new(""));
             if self.should_replace(inner_dir, kind) {
+                #[cfg(feature = "ck3")]
+                if let Some(excluded) = self.lookup_exclusions.as_mut() {
+                    excluded.push((
+                        FileEntry::new(inner_path.to_owned(), stage, kind, entry.path().to_owned()),
+                        "replace_path",
+                    ));
+                }
                 continue;
             }
             self.files.push(FileEntry::new(
@@ -546,7 +559,11 @@ impl Fileset {
         for entry in self.files.drain(..) {
             if let Some(prev) = self.ordered_files.last_mut() {
                 if entry.path == prev.path {
-                    *prev = entry;
+                    let _displaced = std::mem::replace(prev, entry);
+                    #[cfg(feature = "ck3")]
+                    if let Some(excluded) = self.lookup_exclusions.as_mut() {
+                        excluded.push((_displaced, "same_path"));
+                    }
                 } else {
                     self.ordered_files.push(entry);
                 }
@@ -568,6 +585,19 @@ impl Fileset {
         let end = start
             + self.ordered_files[start..].partition_point(|entry| entry.path.starts_with(subpath));
         &self.ordered_files[start..end]
+    }
+
+    #[cfg(feature = "ck3")]
+    pub(crate) fn source_label(&self, kind: FileKind) -> &str {
+        match kind {
+            FileKind::Mod => &self.the_mod.label,
+            FileKind::LoadedMod(idx) => &self.loaded_mods[usize::from(idx)].label,
+            FileKind::Dlc(idx) => &self.loaded_dlcs[usize::from(idx)].label,
+            FileKind::Vanilla => "CK3",
+            FileKind::Clausewitz => "Clausewitz",
+            FileKind::Jomini => "Jomini",
+            FileKind::Internal => "Internal",
+        }
     }
 
     pub fn filter_map_under<F, T>(&self, subpath: &Path, f: F) -> Vec<T>

@@ -139,6 +139,9 @@ pub struct Everything {
     /// Tracks all the files (vanilla and mods) that are relevant to the current validation.
     pub(crate) fileset: Fileset,
 
+    #[cfg(feature = "ck3")]
+    pub(crate) lookup_callers: Option<crate::lookup_callers::CallerLookup>,
+
     /// Tracks specifically the .dds files, and their formats and sizes.
     pub(crate) dds: DdsFiles,
 
@@ -430,7 +433,53 @@ impl Everything {
         mod_root: &Path,
         replace_paths: Vec<PathBuf>,
     ) -> Result<Self> {
+        Self::new_inner(
+            config_filepath,
+            vanilla_dir,
+            workshop_dir,
+            paradox_dir,
+            mod_root,
+            replace_paths,
+            None,
+        )
+    }
+
+    /// Keep definition provenance and collect references to an exact CK3 symbol.
+    #[cfg(feature = "ck3")]
+    pub fn new_with_lookup(
+        config_filepath: Option<&Path>,
+        vanilla_dir: Option<&Path>,
+        workshop_dir: Option<&Path>,
+        paradox_dir: Option<&Path>,
+        mod_root: &Path,
+        replace_paths: Vec<PathBuf>,
+        query: &str,
+    ) -> Result<Self> {
+        Self::new_inner(
+            config_filepath,
+            vanilla_dir,
+            workshop_dir,
+            paradox_dir,
+            mod_root,
+            replace_paths,
+            Some(query),
+        )
+    }
+
+    fn new_inner(
+        config_filepath: Option<&Path>,
+        vanilla_dir: Option<&Path>,
+        workshop_dir: Option<&Path>,
+        paradox_dir: Option<&Path>,
+        mod_root: &Path,
+        replace_paths: Vec<PathBuf>,
+        #[allow(unused_variables)] query: Option<&str>,
+    ) -> Result<Self> {
         let mut fileset = Fileset::new(vanilla_dir, mod_root.to_path_buf(), replace_paths);
+        #[cfg(feature = "ck3")]
+        if query.is_some() {
+            fileset.lookup_exclusions = Some(Vec::new());
+        }
 
         let config_file_name = match Game::game() {
             #[cfg(feature = "ck3")]
@@ -517,9 +566,12 @@ impl Everything {
             }
         }
 
-        Ok(Everything {
+        #[allow(unused_mut)]
+        let mut data = Everything {
             parser: ParserMemory::default(),
             fileset,
+            #[cfg(feature = "ck3")]
+            lookup_callers: query.map(crate::lookup_callers::CallerLookup::new),
             dds: DdsFiles::default(),
             config,
             #[cfg(any(feature = "ck3", feature = "vic3"))]
@@ -597,7 +649,12 @@ impl Everything {
             variable_scopes,
             #[cfg(feature = "jomini")]
             variable_list_scopes,
-        })
+        };
+        #[cfg(feature = "ck3")]
+        if let Some(query) = query {
+            data.enable_definition_history(query);
+        }
+        Ok(data)
     }
 
     fn read_config(name: &str, path: &Path) -> Option<Block> {
@@ -667,29 +724,12 @@ impl Everything {
 
     fn load_pdx_files(&mut self, loader: &ItemLoader) {
         let path = PathBuf::from(loader.itype().path());
-        let recursive = loader.recursive();
-        let expect_count = path.components().count() + 1;
-        for mut block in self.fileset.filter_map_under(&path, |entry| {
-            // It's <= expect_count because some loader paths are files not directories
-            if (recursive || entry.path().components().count() <= expect_count)
-                && entry.filename().to_string_lossy().ends_with(loader.extension())
-            {
-                PdxFile::read_encoded(entry, loader.encoding(), &self.parser)
-            } else {
-                None
-            }
-        }) {
-            if loader.whole_file() {
-                let fname = block.loc.filename();
-                // unwrap is safe here because of the ends_with check above.
-                let key = fname.strip_suffix(loader.extension()).unwrap();
-                let key = Token::new(key, block.loc);
-                (loader.adder())(&mut self.database, key, block);
-            } else {
-                for (key, block) in block.drain_definitions_warn() {
-                    (loader.adder())(&mut self.database, key, block);
-                }
-            }
+        let depth = path.components().count() + 1;
+        for block in self
+            .fileset
+            .filter_map_under(&path, |entry| loader.read_file(entry, depth, &self.parser))
+        {
+            loader.add_block(&mut self.database, block);
         }
     }
 
@@ -1170,6 +1210,16 @@ impl Everything {
         }
     }
 
+    /// Resolve a literal item in a script position that also accepts a scope or value.
+    pub(crate) fn resolve_item_token(&self, itype: Item, token: &Token) -> bool {
+        let found = self.item_exists(itype, token.as_str());
+        #[cfg(feature = "ck3")]
+        if found {
+            self.record_caller(itype, token, None);
+        }
+        found
+    }
+
     pub(crate) fn verify_exists(&self, itype: Item, token: &Token) {
         self.verify_exists_implied(itype, token.as_str(), token);
     }
@@ -1185,6 +1235,8 @@ impl Everything {
         token: &Token,
         max_sev: Severity,
     ) {
+        #[cfg(feature = "ck3")]
+        self.record_typed_caller(itype, key, token);
         match itype {
             Item::Entry => self.fileset.verify_entry_exists(key, token, max_sev),
             Item::File => self.fileset.verify_exists_implied(key, token, max_sev),

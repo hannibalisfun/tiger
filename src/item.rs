@@ -8,8 +8,10 @@ use crate::db::Db;
 use crate::eu5::item::injectable_eu5;
 #[cfg(doc)]
 use crate::everything::Everything;
+use crate::fileset::FileEntry;
 use crate::game::{Game, GameFlags};
-use crate::pdxfile::PdxEncoding;
+use crate::parse::ParserMemory;
+use crate::pdxfile::{PdxEncoding, PdxFile};
 use crate::report::{Confidence, Severity};
 use crate::token::Token;
 #[cfg(feature = "vic3")]
@@ -238,6 +240,35 @@ impl ItemLoader {
     pub fn adder(&self) -> ItemAdder {
         match self {
             ItemLoader::Normal(_, _, adder) | ItemLoader::Full(_, _, _, _, _, _, adder) => *adder,
+        }
+    }
+
+    pub fn read_file(
+        &self,
+        entry: &FileEntry,
+        depth: usize,
+        parser: &ParserMemory,
+    ) -> Option<Block> {
+        // Some loaders have a file path in place of a directory.
+        if (self.recursive() || entry.path().components().count() <= depth)
+            && entry.filename().to_string_lossy().ends_with(self.extension())
+        {
+            PdxFile::read_encoded(entry, self.encoding(), parser)
+        } else {
+            None
+        }
+    }
+
+    pub fn add_block(&self, db: &mut Db, mut block: Block) {
+        if self.whole_file() {
+            let filename = block.loc.filename();
+            let key = filename.strip_suffix(self.extension()).unwrap();
+            let key = Token::new(key, block.loc);
+            (self.adder())(db, key, block);
+        } else {
+            for (key, block) in block.drain_definitions_warn() {
+                (self.adder())(db, key, block);
+            }
         }
     }
 }

@@ -23,6 +23,8 @@ use crate::variables::Variables;
 #[derive(Clone, Debug, Default)]
 #[allow(clippy::struct_field_names)]
 pub struct Traits {
+    #[cfg(feature = "ck3")]
+    pub(crate) lookup: Option<crate::lookup::DefinitionHistory>,
     traits: TigerHashMap<&'static str, Trait>,
     groups: TigerHashSet<Token>,
     tracks: TigerHashSet<Token>,
@@ -37,6 +39,8 @@ pub struct Traits {
 
 impl Traits {
     fn load_item(&mut self, key: Token, block: Block) {
+        #[cfg(feature = "ck3")]
+        crate::lookup::record(&mut self.lookup, Item::Trait, &key, None);
         if let Some(other) = self.traits.get(key.as_str())
             && other.key.loc.kind >= key.loc.kind
         {

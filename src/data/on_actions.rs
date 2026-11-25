@@ -27,11 +27,15 @@ use crate::variables::Variables;
 
 #[derive(Clone, Debug, Default)]
 pub struct OnActions {
+    #[cfg(feature = "ck3")]
+    pub(crate) lookup: Option<crate::lookup::DefinitionHistory>,
     on_actions: TigerHashMap<&'static str, OnAction>,
 }
 
 impl OnActions {
     fn load_item(&mut self, key: Token, block: Block) {
+        #[cfg(feature = "ck3")]
+        crate::lookup::record(&mut self.lookup, Item::OnAction, &key, None);
         if let Some(other) = self.on_actions.get_mut(key.as_str()) {
             other.add(key, block);
         } else {
@@ -62,8 +66,15 @@ impl OnActions {
         });
     }
 
+    #[cfg(feature = "ck3")]
+    pub(crate) fn fragment_keys(&self) -> impl Iterator<Item = &Token> {
+        self.on_actions.values().flat_map(|action| action.actions.iter().map(|(key, _)| key))
+    }
+
     pub fn validate_call(&self, key: &Token, data: &Everything, sc: &mut ScopeContext) {
         if let Some(action) = self.on_actions.get(key.as_str()) {
+            #[cfg(feature = "ck3")]
+            data.record_caller(Item::OnAction, key, None);
             action.validate_call(data, sc);
         }
     }

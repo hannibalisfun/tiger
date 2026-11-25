@@ -30,6 +30,20 @@ py -3 workspace/run.py --game $game --mod '../Camp-Pressure-PoD' --parent '../PO
 
 Exit **0** means the result has no findings at the selected severity, **1** means findings reached the threshold, and **2** means validation could not complete. The default threshold is `warning`. Use `--json` for Tiger's diagnostic keys, source locations, caller chains, and run metadata. The regular single-mod run uses parallel validation. `--deterministic` selects fixed hash seeds and a single validation thread.
 
+## Find a definition and its callers
+
+Pass an identifier to the same load order used for validation. Names match exactly, with CK3's numeric event IDs treating `tiger.1` and `tiger.0001` as the same event. This example finds the combat effect that selects the next actor in the working combat integration.
+
+```powershell
+py -3 workspace/run.py --game $game --mod '../POD-Combat-Integration/devpod' --lookup pod_combat_select_next_actor_effect
+```
+
+Add `--json` for `lookup.definitions` and `lookup.callers`. Definitions include the source layer, relative path, line, kind, status and macro parameters. Tiger marks the active definition as `effective`, additive fragments such as on-actions as `contribution`, and displaced definitions as `shadowed`. The reason distinguishes an overwritten key, a file with the same path in a higher layer, and a descriptor's `replace_path`.
+
+Tiger retains shadow history for scripted effects, scripted triggers, script values, events, on-actions, traits, and the common item database. Other specialized registries can provide their retained keys. Caller rows identify references that Tiger resolved during validation, including macro invocation locations when expanded. Dynamically assembled identifiers that Tiger cannot resolve and engine-only calls can have no caller row. An empty caller list alone cannot establish that a symbol is unused.
+
+Each run includes `metadata.input_revisions` in load order, with the input path, containing Git repository, full HEAD revision and dirty state. For a nested mod such as `devpod`, dirty state covers tracked changes and non-ignored untracked files under that mod directory. A non-Git game install has a launcher version and null Git fields. A Git-ignored input may have an enclosing revision and unknown dirty state. In lookup mode exit **0** means Tiger indexed an active definition or contribution, **1** means the identifier is absent or fully shadowed, and **2** indicates a runner or Tiger failure.
+
 ## Compare revisions
 
 Pass an unmodified checkout or overlay of the primary mod as `--baseline`. Put the changed version in `--mod`. Both runs use the same game, ordered parents, and deterministic validation. The comparison includes loaded parent reports so a changed definition can surface an error in an unchanged caller. Use `--show-vanilla` when vanilla callers also need checking.
@@ -48,6 +62,7 @@ Caching is opt-in. The baseline key includes the binary and rules, game version,
 py -3 -B workspace/tests/first_pass.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
 py -3 -B workspace/tests/port_passes.py --workspace .. --game $game --tiger target/release/ck3-tiger.exe
 py -3 -B workspace/tests/test_runner.py
+py -3 -B workspace/tests/test_lookup.py
 cargo test --locked -p tiger-lib
 ```
 
