@@ -1,0 +1,35 @@
+﻿tiger_district_mage_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_castle_view.dds" }
+	decision_group_type = pod_splat
+	ai_check_interval = 0
+
+	is_shown = {
+		trigger_if = { limit = { is_adult = yes } always = yes }
+		trigger_else_if = { limit = { is_adult = no } always = no }
+		trigger_else = { always = no }
+	}
+	is_valid = {
+		trigger_if = { limit = { is_adult = yes } always = yes }
+		trigger_else_if = { limit = { is_adult = no } always = no } # expect: interrupted trigger chain
+		is_adult = yes
+		trigger_if = { limit = { is_adult = yes } always = yes }
+		trigger_else_if = { limit = { is_adult = no } always = no } # expect: unterminated trigger chain
+	}
+	effect = {
+		capital_province = { add_building = castle_garrison_1 } # expect: province receiver
+		capital_province.holding_district = {
+			add_building = castle_garrison_1
+			add_building = building_type:castle_garrison_1
+			add_building = root # expect: character argument
+		}
+		capital_province = {
+			every_built_regular_district = {
+				include_inactive = yes
+				district_province.holding_district = { add_building = castle_garrison_1 }
+			}
+		}
+		add_trait = tiger_assess_nonexistent_trait # expect: unknown trait
+		if = { limit = { is_adult = yes } add_gold = 1 }
+		else_if = { limit = { is_adult = no } add_gold = 1 }
+	}
+}

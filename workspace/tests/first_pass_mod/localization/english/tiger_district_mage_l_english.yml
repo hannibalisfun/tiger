@@ -1,0 +1,5 @@
+﻿l_english:
+ tiger_district_mage_decision: "Test district and trigger rules"
+ tiger_district_mage_decision_desc: "Check the validator against district scopes and conditional branches."
+ tiger_district_mage_decision_tooltip: "Check the validation cases."
+ tiger_district_mage_decision_confirm: "Run the test"

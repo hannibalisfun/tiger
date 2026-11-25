@@ -31,6 +31,8 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Print the validator build and its target game rules (one field per line).
+    BuildInfo,
     /// Update the binary. If no version is specified, the latest release is pulled from GitHub and
     /// installed over the current binary.
     Update {
@@ -41,6 +43,9 @@ enum Commands {
 
 #[derive(Args)]
 struct ValidateArgs {
+    /// Use repeatable hash iteration and a single validation thread for baseline comparisons.
+    #[clap(long)]
+    deterministic: bool,
     #[cfg(any(feature = "vic3", feature = "eu5"))]
     /// Path to folder of mod to check.
     modpath: PathBuf,
@@ -111,12 +116,21 @@ pub fn run(
 
     #[allow(clippy::single_match_else)]
     match cli.command {
+        Some(Commands::BuildInfo) => {
+            println!("validator={bin_name}");
+            println!("build={current_version}");
+            println!("rules={name_short} {version}");
+            Ok(())
+        }
         Some(Commands::Update { version: target_version }) => {
             update(current_version, target_version.as_deref())?;
             Ok(())
         }
         None => {
             let mut args = cli.validate_args.unwrap();
+            if args.deterministic {
+                tiger_lib::enable_comparison_mode()?;
+            }
 
             if args.json && args.consolidate {
                 Cli::command()

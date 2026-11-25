@@ -1,9 +1,12 @@
 //! Miscellaneous convenience functions.
-use ahash::{HashMap, HashSet, RandomState};
+use ahash::{AHasher, RandomState};
 use bimap::BiHashMap;
 
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
+use std::hash::BuildHasher;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::game::Game;
 use crate::item::Item;
@@ -14,15 +17,44 @@ use crate::report::{ErrorKey, tips, warn};
 use crate::scopes::Scopes;
 use crate::token::Token;
 
-pub type TigerHashMap<K, V> = HashMap<K, V>;
+static DETERMINISTIC: AtomicBool = AtomicBool::new(false);
+
+/// Configure the single-process CLI before it creates tables or validates callers.
+pub fn enable_comparison_mode() -> anyhow::Result<()> {
+    rayon::ThreadPoolBuilder::new().num_threads(1).build_global()?;
+    DETERMINISTIC.store(true, Ordering::Relaxed);
+    Ok(())
+}
+
+#[derive(Clone, Debug)]
+pub struct TigerBuildHasher(RandomState);
+
+impl Default for TigerBuildHasher {
+    fn default() -> Self {
+        if DETERMINISTIC.load(Ordering::Relaxed) {
+            Self(RandomState::with_seeds(1, 2, 3, 4))
+        } else {
+            Self(RandomState::new())
+        }
+    }
+}
+
+impl BuildHasher for TigerBuildHasher {
+    type Hasher = AHasher;
+    fn build_hasher(&self) -> AHasher {
+        self.0.build_hasher()
+    }
+}
+
+pub type TigerHashMap<K, V> = HashMap<K, V, TigerBuildHasher>;
 pub use ahash::HashMapExt as TigerHashMapExt;
-pub type TigerHashSet<T> = HashSet<T>;
+pub type TigerHashSet<T> = HashSet<T, TigerBuildHasher>;
 pub use ahash::HashSetExt as TigerHashSetExt;
 
 #[macro_export]
 macro_rules! set {
     ( $x:expr ) => {
-        ahash::AHashSet::from($x).into()
+        $x.into_iter().collect::<$crate::TigerHashSet<_>>()
     };
 }
 
@@ -142,7 +174,7 @@ pub const BANNED_NAMES: &[&str] = &[
     "take_hostage", // actually used by vanilla CK3
 ];
 
-pub(crate) type BiTigerHashMap<L, R> = BiHashMap<L, R, RandomState, RandomState>;
+pub(crate) type BiTigerHashMap<L, R> = BiHashMap<L, R, TigerBuildHasher, TigerBuildHasher>;
 
 #[derive(Debug, Clone)]
 pub(crate) enum ActionOrEvent {
